@@ -5,7 +5,7 @@ export const CreateListSchema = z.object({
     boardId: z.string().uuid(),
   }),
   body: z.object({
-    title: z.string().min(1, 'Title is required').max(255),
+    title: z.string().min(1, 'Title is required').max(50, 'Title cannot exceed 50 characters'),
   }),
 });
 
@@ -41,7 +41,7 @@ export const CopyListSchema = z.object({
   }),
   body: z.object({
     targetBoardId: z.uuid(),
-    title: z.string().min(1).max(255).optional(),
+    title: z.string().min(1).max(50).optional(),
     position: z.number().int().min(0).optional(),
   }),
 });
@@ -51,7 +51,7 @@ export const EditListName = z.object({
     id: z.uuid(),
   }),
   body: z.object({
-    title: z.string().min(1).max(255),
+    title: z.string().min(1).max(50),
   }),
 });
 
@@ -62,5 +62,15 @@ export const ReorderList = z.object({
   body: z.object({
     prevListId: z.string().uuid().nullable(),
     nextListId: z.string().uuid().nullable(),
+  }),
+});
+
+export const UpdateListSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  body: z.object({
+    title: z.string().min(1).max(50).optional(),
+    isArchived: z.boolean().optional(),
   }),
 });

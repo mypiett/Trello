@@ -205,6 +205,43 @@ export class BoardController {
     }
   }
 
+  static async respondToInvitation(req: Request): Promise<ServiceResponse<any>> {
+    try {
+      const boardId = req.params.id as string;
+      const currentUserId = req.user?.userId;
+      const { status } = req.body;
+
+      if (!['active', 'declined'].includes(status)) {
+        return new ServiceResponse(
+          ResponseStatus.Failed,
+          'Invalid status',
+          null,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const result = await boardService.respondToInvitation(
+        boardId,
+        currentUserId,
+        status
+      );
+
+      return new ServiceResponse(
+        ResponseStatus.Success,
+        result.message,
+        result,
+        StatusCodes.OK
+      );
+    } catch (error: any) {
+      return new ServiceResponse(
+        ResponseStatus.Failed,
+        error.message,
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
   static async deleteBoardPermanently(
     req: Request
   ): Promise<ServiceResponse<any>> {
@@ -644,6 +681,45 @@ export class BoardController {
       return new ServiceResponse(
         ResponseStatus.Failed,
         error.message || 'Error removing member',
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
+  static async getCards(req: Request): Promise<ServiceResponse<any>> {
+    try {
+      const boardId =
+        (req.params as any).id ||
+        (req.params as any).boardId ||
+        (req.query.boardId as string | undefined);
+
+      if (!boardId) {
+        return new ServiceResponse(
+          ResponseStatus.Failed,
+          'boardId is required',
+          null,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const { archived } = req.query;
+      let isArchived: boolean | undefined;
+
+      if (archived === 'true') isArchived = true;
+      else if (archived === 'false') isArchived = false;
+
+      const cards = await boardService.getCards(boardId, isArchived);
+      return new ServiceResponse(
+        ResponseStatus.Success,
+        'Cards fetched successfully',
+        cards,
+        StatusCodes.OK
+      );
+    } catch (error: any) {
+      return new ServiceResponse(
+        ResponseStatus.Failed,
+        error.message || 'Error fetching cards',
         null,
         StatusCodes.BAD_REQUEST
       );

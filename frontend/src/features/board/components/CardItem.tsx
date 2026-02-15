@@ -30,8 +30,6 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
     ({ card, onReload, onClick, style, attributes, listeners, isDragging }, ref) => {
         const [isHovered, setIsHovered] = useState(false);
         const [localCompleted, setLocalCompleted] = useState(card.isCompleted);
-
-        // ✅ FIX 1: Chỉ đồng bộ khi dữ liệu từ cha (Server) thực sự thay đổi
         useEffect(() => {
             setLocalCompleted(card.isCompleted);
         }, [card.isCompleted]);
@@ -131,8 +129,6 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
                             } ${localCompleted ? 'line-through text-gray-500' : ''}`}>
                             {card.title}
                         </div>
-
-                        {/* Badges/Info could go here */}
                     </div>
                 </ContextMenuTrigger>
 

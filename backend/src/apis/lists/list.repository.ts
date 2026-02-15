@@ -9,16 +9,16 @@ export class ListRepository {
   private cardRepository = AppDataSource.getRepository(Card);
   private boardRepository = new BoardRepository();
 
-  async getAllListsByBoard(boardId: string): Promise<List[]> {
+  async getAllListsByBoard(boardId: string, isArchived: boolean = false): Promise<List[]> {
     return await this.listRepository
       .createQueryBuilder('list')
-      .select(['list.id', 'list.title', 'list.position'])
+      .select(['list.id', 'list.title', 'list.position', 'list.isArchived'])
       .leftJoin('list.cards', 'cards', 'cards.isArchived = :isCardArchived', {
         isCardArchived: false,
       })
       .addSelect(['cards.id', 'cards.title', 'cards.position', 'cards.boardId'])
       .where('list.boardId = :boardId', { boardId })
-      .andWhere('list.isArchived = :isArchived', { isArchived: false })
+      .andWhere('list.isArchived = :isArchived', { isArchived })
       .orderBy('list.position', 'ASC')
       .addOrderBy('cards.position', 'ASC')
       .getMany();
@@ -335,5 +335,12 @@ export class ListRepository {
         return { list: savedList, copiedCount: sourceCards.length };
       }
     );
+  }
+
+  async deleteList(listId: string): Promise<void> {
+    // Delete all cards in the list first
+    await this.cardRepository.delete({ list: { id: listId } });
+    // Then delete the list
+    await this.listRepository.delete(listId);
   }
 }

@@ -43,6 +43,13 @@ export class BoardMembers extends DateTimeEntity {
   @JoinColumn({ name: 'userId' })
   public user: User;
 
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'active', 'declined'],
+    default: 'active', // Existing members are active by default
+  })
+  public status: 'pending' | 'active' | 'declined';
+
   @ManyToOne(() => Board, (board) => board.boardMembers, {
     onDelete: 'CASCADE',
   })

@@ -1,4 +1,4 @@
-import apiFactory, { API_ENDPOINTS } from "./api-factory";
+import apiFactory from "./api-factory";
 
 export type BoardVisibility = 'private' | 'public' | 'workspace';
 
@@ -10,6 +10,12 @@ export interface Card {
     position?: number;
     isCompleted?: boolean;
     isArchived?: boolean;
+    members?: Member[];
+    labels?: any[];
+    attachments?: any[];
+    due?: string;
+    listId?: string; // Add listId for archived cards context
+    listTitle?: string; // Add listTitle for context
 }
 
 export interface List {
@@ -34,6 +40,9 @@ export interface BoardDetail {
     visibility: BoardVisibility;
     lists: List[];
     members: Member[];
+    labels: { id: string; name: string; color: string }[];
+    commentPolicy: 'disabled' | 'members' | 'workspace' | 'anyone';
+    memberManagePolicy: 'admins_only' | 'all_members';
 }
 
 export const boardApi = {
@@ -69,5 +78,21 @@ export const boardApi = {
                 'Content-Type': 'multipart/form-data',
             },
         });
+    },
+
+    getActivities: (boardId: string) => {
+        return apiFactory.get(`/boards/${boardId}/activities`);
+    },
+
+    getArchivedLists: (boardId: string) => {
+        return apiFactory.get<List[]>(`/boards/${boardId}/lists?archived=true`);
+    },
+
+    respondToInvitation: (boardId: string, status: 'active' | 'declined') => {
+        return apiFactory.post(`/boards/${boardId}/invitations/respond`, { status });
+    },
+
+    getArchivedCards: (boardId: string) => {
+        return apiFactory.get<Card[]>(`/boards/${boardId}/cards?archived=true`);
     }
 };

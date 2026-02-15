@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 interface Props {
     boardId: string;
-    onSuccess: () => void; 
+    onSuccess: () => void;
 }
 
 export const CreateListForm = ({ boardId, onSuccess }: Props) => {
@@ -24,8 +24,8 @@ export const CreateListForm = ({ boardId, onSuccess }: Props) => {
             await listApi.create(boardId, title);
             toast.success("Tạo List thành công! ✨");
             setTitle("");
-            setIsEditing(false); 
-            onSuccess(); 
+            setIsEditing(false);
+            onSuccess();
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Đã xảy ra lỗi khi tạo List.");
         } finally {
@@ -42,6 +42,7 @@ export const CreateListForm = ({ boardId, onSuccess }: Props) => {
                         placeholder="Nhập tiêu đề danh sách..."
                         className="mb-2 bg-white border-blue-500 border-2"
                         value={title}
+                        maxLength={50}
                         onChange={(e) => setTitle(e.target.value)}
                     />
                     <div className="flex items-center gap-2">

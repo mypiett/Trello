@@ -13,10 +13,13 @@ import {
     Pencil,
     Copy,
     ArrowRightLeft,
-    Archive
+
+    Archive,
+    Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSortable } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
@@ -37,12 +40,6 @@ interface Props {
 }
 
 export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => {
-    // ...
-    // (We need to keep the existing hooks and logic, just updating the prop and usage)
-    // Actually, replace_file_content is for contiguous block. I need to be careful not to delete hooks.
-    // I will use multiple smaller replacements or one careful one if the file structure permits.
-    // The previous view showed hooks are at the top. I can replace the interface and component signature.
-    // And then the usage of CardItem.
     const {
         attributes,
         listeners,
@@ -52,7 +49,13 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
         isDragging
     } = useSortable({
         id: list.id,
-        data: { ...list }
+        data: { ...list, type: "COLUMN" }
+    });
+
+    // Explicit droppable zone for cards to handle empty list drops
+    const { setNodeRef: setDroppableNodeRef } = useDroppable({
+        id: list.id + "::droppable",
+        data: { list, type: "COLUMN_DROPPABLE" }
     });
 
     const style = {
@@ -84,12 +87,13 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
     };
 
     const handleRenameList = async () => {
+        // ... (validation)
         if (!listTitle.trim() || listTitle === list.title) {
             setIsRenaming(false);
             return;
         }
         try {
-            await listApi.update(list.id, listTitle);
+            await listApi.update(list.id, { title: listTitle });
             toast.success("Đã đổi tên danh sách");
             onReload();
         } catch (error) {
@@ -97,6 +101,17 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
             setListTitle(list.title);
         } finally {
             setIsRenaming(false);
+        }
+    };
+
+    const handleArchiveList = async () => {
+        if (!confirm("Bạn có chắc muốn lưu trữ danh sách này không?")) return;
+        try {
+            await listApi.update(list.id, { isArchived: true });
+            toast.success("Đã lưu trữ danh sách");
+            onReload();
+        } catch (error) {
+            toast.error("Lỗi khi lưu trữ danh sách");
         }
     };
 
@@ -108,6 +123,17 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
             onReload();
         } catch (error) {
             toast.error("Lỗi khi lưu trữ thẻ");
+        }
+    };
+
+    const handleDeleteList = async () => {
+        if (!confirm("CẢNH BÁO: HÀNH ĐỘNG NÀY KHÔNG THỂ HOÀN TÁC!\n\nBạn có chắc chắn muốn xóa vĩnh viễn danh sách này?\nTất cả thẻ trong danh sách này cũng sẽ bị xóa vĩnh viễn.")) return;
+        try {
+            await listApi.delete(list.id);
+            toast.success("Đã xóa danh sách vĩnh viễn");
+            onReload();
+        } catch (error) {
+            toast.error("Lỗi khi xóa danh sách");
         }
     };
 
@@ -131,6 +157,7 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
                             onBlur={handleRenameList}
                             onKeyDown={(e) => e.key === "Enter" && handleRenameList()}
                             autoFocus
+                            maxLength={50}
                             className="h-8 text-sm font-semibold bg-white"
                         />
                     ) : (
@@ -179,10 +206,26 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
 
                                 <DropdownMenuItem
                                     onClick={handleArchiveAllCards}
-                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                    className="text-gray-700"
                                 >
                                     <Archive className="mr-2 h-4 w-4" />
                                     <span>Lưu trữ tất cả thẻ</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    onClick={handleArchiveList}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                >
+                                    <Archive className="mr-2 h-4 w-4" />
+                                    <span>Lưu trữ danh sách này</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    onClick={handleDeleteList}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Xóa vĩnh viễn</span>
                                 </DropdownMenuItem>
 
                             </DropdownMenuContent>
@@ -190,10 +233,13 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
                     )}
                 </div>
 
-                <div className="px-2 flex flex-col gap-2 overflow-y-auto mx-1 custom-scrollbar min-h-[10px]">
+                <div
+                    ref={setDroppableNodeRef}
+                    className="px-2 flex flex-col gap-2 overflow-y-auto mx-1 custom-scrollbar min-h-[10px] transition-all"
+                >
                     <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
                         {list.cards?.map((card) => (
-                            <CardItem key={card.id} card={card} onReload={onReload} onClick={() => onCardClick?.(card)} />
+                            <CardItem key={card.id} card={card} onReload={onReload} onClick={() => onCardClick?.({ ...card, listTitle: list.title })} />
                         ))}
                     </SortableContext>
                 </div>
@@ -206,6 +252,7 @@ export const ListColumn = ({ list, onReload, readonly, onCardClick }: Props) => 
                                 placeholder="Nhập tiêu đề thẻ..."
                                 className="min-h-[80px] bg-white shadow-sm mb-2 resize-none"
                                 value={newCardTitle}
+                                maxLength={100}
                                 onChange={(e) => setNewCardTitle(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddCard()}
                             />

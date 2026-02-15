@@ -14,6 +14,7 @@ import { WorkspaceMembers } from './workspace-member.entity';
 import { Attachment } from './attachment.entity';
 import { Card } from './card.entity';
 import { Action } from './action.entity';
+import { BoardActivity } from './board-activity.entity';
 
 @Entity('users')
 @Index('idx_users_email', ['email'])
@@ -65,4 +66,7 @@ export class User extends DateTimeEntity {
 
   @OneToMany(() => Action, (action) => action.memberCreator)
   public actions: Action[];
+
+  @OneToMany(() => BoardActivity, (activity) => activity.actor)
+  public boardActivities: BoardActivity[];
 }

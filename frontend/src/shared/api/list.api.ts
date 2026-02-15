@@ -5,8 +5,8 @@ export const listApi = {
         return apiFactory.post(`/boards/${boardId}/lists`, { title });
     },
 
-    update: (listId: string, title: string) => {
-        return apiFactory.patch(`/lists/${listId}`, { title });
+    update: (listId: string, data: { title?: string; isArchived?: boolean }) => {
+        return apiFactory.patch(`/lists/${listId}`, data);
     },
 
     archiveAllCards: (listId: string) => {
@@ -15,5 +15,9 @@ export const listApi = {
 
     reorder: (listId: string, prevListId: string | null, nextListId: string | null) => {
         return apiFactory.patch(`/lists/${listId}/reorder`, { prevListId, nextListId });
+    },
+
+    delete: (listId: string) => {
+        return apiFactory.delete(`/lists/${listId}`);
     }
 };

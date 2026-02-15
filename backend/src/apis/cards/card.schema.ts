@@ -43,7 +43,7 @@ export const GetCardSchema = z.object({
 export const CreateCardSchema = z.object({
   body: z.object({
     listId: z.uuid(),
-    title: z.string().min(1, 'Title is required').max(255),
+    title: z.string().min(1, 'Title is required').max(100, 'Title cannot exceed 100 characters'),
     description: z.string().optional(),
     position: z.number().optional(),
     coverUrl: z.url().optional(),
@@ -60,7 +60,7 @@ export const UpdateCardSchema = z.object({
     id: z.uuid(),
   }),
   body: z.object({
-    title: z.string().min(1).max(255).optional(),
+    title: z.string().min(1).max(100).optional(),
     description: z.string().optional(),
     position: z.number().optional(),
     isArchived: z.boolean().optional(),

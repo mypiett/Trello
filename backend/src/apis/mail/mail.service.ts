@@ -4,8 +4,13 @@ interface BoardInvitationEmailOptions {
   boardTitle: string;
   inviterName: string;
   roleName: string;
-  link?: string;
+  link?: string; // Fallback or Accept link
+  declineLink?: string;
 }
+
+// ... existing code ...
+
+
 
 export class EmailService {
   private transporter;
@@ -24,7 +29,7 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, otp: string) {
     await this.transporter.sendMail({
-      from: `"TrelloClone" <${process.env.SMTP_USER}>`,
+      from: `"TaskFlow" <${process.env.SMTP_USER}>`,
       to: email,
       subject: 'Xác thực tài khoản của bạn',
       html: `
@@ -43,7 +48,7 @@ export class EmailService {
   async sendForgotPasswordEmail(email: string, code: string) {
     try {
       const info = await this.transporter.sendMail({
-        from: `"TrelloClone" <${process.env.SMTP_USER}>`,
+        from: `"TaskFlow" <${process.env.SMTP_USER}>`,
         to: email,
         subject: 'Reset your password',
         html: `
@@ -59,17 +64,36 @@ export class EmailService {
   }
 
   async sendBoardInvitationEmail(options: BoardInvitationEmailOptions) {
-    const { to, boardTitle, inviterName, roleName, link } = options;
-    const boardLink = link || `${process.env.FRONTEND_URL || process.env.BACKEND_URL}/boards`;
+    const { to, boardTitle, inviterName, roleName, link, declineLink } = options;
+    const acceptLink = link || `${process.env.FRONTEND_URL || process.env.BACKEND_URL}/boards`;
+
+    const formatRoleName = (role: string) => {
+      switch (role) {
+        case 'board_admin': return 'Board Admin';
+        case 'board_member': return 'Board Member';
+        case 'board_observer': return 'Observer';
+        default: return role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      }
+    };
+
+    const friendlyRole = formatRoleName(roleName);
 
     await this.transporter.sendMail({
-      from: `"TrelloClone" <${process.env.SMTP_USER}>`,
+      from: `"TaskFlow" <${process.env.SMTP_USER}>`,
       to,
       subject: `You were added to board "${boardTitle}"`,
       html: `
-        <h3>Hello!</h3>
-        <p>${inviterName} has added you to the board "<b>${boardTitle}</b>" as <b>${roleName}</b>.</p>
-        <p>Click <a href="${boardLink}">here</a> to access the board.</p>
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h3>Hello!</h3>
+          <p>${inviterName} has invited you to join the board "<b>${boardTitle}</b>" as <b>${friendlyRole}</b>.</p>
+          <p>Please accept or decline this invitation:</p>
+          <div style="margin: 20px 0;">
+            <a href="${acceptLink}" style="background-color: #0079bf; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Accept Invitation</a>
+            ${declineLink ? `<a href="${declineLink}" style="background-color: #eb5a46; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Decline</a>` : ''}
+          </div>
+          <p>If the button doesn't work, you can copy the link below:</p>
+          <p><small>${acceptLink}</small></p>
+        </div>
       `,
     });
   }

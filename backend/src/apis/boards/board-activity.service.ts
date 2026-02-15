@@ -18,41 +18,46 @@ export class BoardActivityService {
     targetId?: string;
     metadata?: any;
   }) {
+    console.log('BoardActivityService.logActivity params:', params);
     const activity = this.repo.create({
       boardId: params.boardId,
       actorId: params.actorId ?? null,
-      actor: params.actorId ? ({ id: params.actorId } as User) : undefined,
       actionType: params.actionType,
       targetType: params.targetType,
       targetId: params.targetId ?? null,
       metadata: params.metadata ?? undefined,
     } as DeepPartial<BoardActivity>);
 
-    return this.repo.save(activity);
+    const saved = await this.repo.save(activity);
+    console.log('BoardActivityService.logActivity saved:', saved);
+    return saved;
   }
 
   async getBoardActivity(boardId: string, page = 1, limit = 20) {
-    const [items, total] = await this.repo.findAndCount({
-      where: { boardId },
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-      relations: ['actor'],
-      select: {
-        id: true,
-        boardId: true,
-        actionType: true,
-        targetType: true,
-        targetId: true,
-        metadata: true,
-        createdAt: true,
-        actor: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    });
+    console.log('BoardActivityService.getBoardActivity fetching for board:', boardId);
+
+    const query = this.repo.createQueryBuilder('activity')
+      .leftJoinAndSelect('activity.actor', 'actor')
+      .where('activity.boardId = :boardId', { boardId })
+      .orderBy('activity.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .select([
+        'activity.id',
+        'activity.boardId',
+        'activity.actionType',
+        'activity.targetType',
+        'activity.targetId',
+        'activity.metadata',
+        'activity.createdAt',
+        'activity.actorId', // Explicitly select actorId
+        'actor.id',
+        'actor.name',
+        'actor.email',
+        'actor.avatarUrl',
+      ]);
+
+    const [items, total] = await query.getManyAndCount();
 
     return {
       items,

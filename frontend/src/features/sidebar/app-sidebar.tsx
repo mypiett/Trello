@@ -67,11 +67,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         {/* <TeamSwitcher teams={workspaces} /> */}
-        <div className="flex items-center gap-2 px-4 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold">
-            T
+        <div className="flex items-center gap-2 px-4 py-2 text-sidebar-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-bold overflow-hidden transition-transform duration-300 hover:rotate-12 hover:scale-110">
+            <img src="/taskflow.png" alt="TaskFlow" className="w-full h-full object-contain p-1" />
           </div>
-          <div className="font-semibold text-lg">Trello Clone</div>
+          <div className="font-semibold text-lg">TaskFlow</div>
         </div>
       </SidebarHeader>
       <SidebarContent>

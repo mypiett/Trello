@@ -4,11 +4,20 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuGroup,
 } from "@/shared/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { tokenStorage } from "@/shared/utils/tokenStorage";
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
+import {
+  ChevronsUpDown, LogOut, Settings, User,
+  Archive, Users, Moon, Sun, Laptop
+} from "lucide-react";
+import { useTheme } from "@/shared/providers/ThemeProvider";
 
 interface NavUserProps {
   user: {
@@ -20,6 +29,7 @@ interface NavUserProps {
 
 export function NavUser({ user }: NavUserProps) {
   const navigate = useNavigate();
+  const { setTheme, theme } = useTheme();
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()
@@ -55,15 +65,62 @@ export function NavUser({ user }: NavUserProps) {
         align="end"
         sideOffset={4}
       >
-        <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
-          <User className="mr-2 h-4 w-4 text-gray-500" />
-          Hồ sơ cá nhân
-        </DropdownMenuItem>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
-          <Settings className="mr-2 h-4 w-4 text-gray-500" />
-          Cài đặt
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+            <User className="mr-2 h-4 w-4 text-gray-500" />
+            Hồ sơ cá nhân
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+            <Settings className="mr-2 h-4 w-4 text-gray-500" />
+            Cài đặt
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => navigate("/archives")} className="cursor-pointer">
+            <Archive className="mr-2 h-4 w-4 text-gray-500" />
+            Kho lưu trữ
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => navigate("/login")} className="cursor-pointer">
+            <Users className="mr-2 h-4 w-4 text-gray-500" />
+            Chuyển đổi tài khoản
+          </DropdownMenuItem>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="cursor-pointer">
+              {theme === 'light' && <Sun className="mr-2 h-4 w-4" />}
+              {theme === 'dark' && <Moon className="mr-2 h-4 w-4" />}
+              {theme === 'system' && <Laptop className="mr-2 h-4 w-4" />}
+              <span>Giao diện</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
+                <Sun className="mr-2 h-4 w-4" />
+                <span>Sáng</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+                <Moon className="mr-2 h-4 w-4" />
+                <span>Tối</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
+                <Laptop className="mr-2 h-4 w-4" />
+                <span>Hệ thống</span>
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
 

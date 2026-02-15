@@ -11,6 +11,7 @@ import { rbacProvider } from '@/common/utils/rbac';
 import crypto from 'crypto';
 import { AddBoardMemberInput } from './board.schema';
 import { Card } from '@/common/entities/card.entity';
+import { Label } from '@/common/entities/label.entity';
 
 export class BoardService {
   private boardRepository = AppDataSource.getRepository(Board);
@@ -20,6 +21,7 @@ export class BoardService {
   private roleRepository = AppDataSource.getRepository(Role);
   private emailService = new EmailService();
   private cardRepository = AppDataSource.getRepository(Card);
+  private labelRepository = AppDataSource.getRepository(Label);
 
   async createBoard(data: CreateBoardDto, creatorId?: string) {
     const workspace = await this.workspaceRepository.findOne({
@@ -38,6 +40,23 @@ export class BoardService {
     });
 
     const savedBoard = await this.boardRepository.save(board);
+
+    // Seed default labels
+    const DEFAULT_LABELS = [
+      { name: 'Xanh lá', color: '#61bd4f' },
+      { name: 'Vàng', color: '#f2d600' },
+      { name: 'Cam', color: '#ff9f1a' },
+      { name: 'Đỏ', color: '#eb5a46' },
+      { name: 'Tím', color: '#c377e0' },
+      { name: 'Xanh dương', color: '#0079bf' },
+    ];
+
+    const labels = DEFAULT_LABELS.map(l => this.labelRepository.create({
+      ...l,
+      boardId: savedBoard.id
+    }));
+    await this.labelRepository.save(labels);
+
     if (creatorId) {
       const ownerRole = await this.roleRepository.findOne({
         where: { name: ROLES.BOARD_OWNER },
@@ -93,10 +112,12 @@ export class BoardService {
         'boardMembers',
         'boardMembers.user',
         'boardMembers.role',
+        'labels',
         'lists',
         'lists.cards',
         'lists.cards.labels',
         'lists.cards.members',
+        'lists.cards.attachments',
       ],
       select: {
         id: true,
@@ -123,6 +144,11 @@ export class BoardService {
             avatarUrl: true,
           },
         },
+        labels: {
+          id: true,
+          name: true,
+          color: true,
+        },
         lists: {
           id: true,
           title: true,
@@ -134,6 +160,14 @@ export class BoardService {
             position: true,
             coverUrl: true,
             description: true,
+            isArchived: true,
+            attachments: {
+              id: true,
+              name: true,
+              url: true,
+              mimeType: true,
+              createdAt: true,
+            },
           },
         },
       },
@@ -145,6 +179,9 @@ export class BoardService {
     });
 
     if (!board) throw new Error('Board not found');
+
+    // Filter out archived lists
+    board.lists = board.lists.filter(list => !list.isArchived);
 
     const transformedBoard = {
       ...board,
@@ -159,7 +196,9 @@ export class BoardService {
       lists: board.lists.map((list) => ({
         ...list,
         cards: list.cards
-          ? list.cards.sort((a: any, b: any) => a.position - b.position)
+          ? list.cards
+            .filter((c) => !c.isArchived)
+            .sort((a: any, b: any) => a.position - b.position)
           : [],
       })),
     };
@@ -235,10 +274,12 @@ export class BoardService {
       boardId,
       userId: user.id,
       roleId: role.id,
+      status: 'pending', // Set status to pending
     });
 
     await this.boardMemberRepository.save(newMember);
 
+    // Don't clear cache yet as they are not active? Or maybe yes to ensure they don't have access?
     await rbacProvider.clearCache(user.id, boardId);
 
     const savedMember = await this.boardMemberRepository.findOne({
@@ -249,18 +290,45 @@ export class BoardService {
       delete savedMember.user.password;
     }
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const acceptLink = `${frontendUrl}/invite/accept?boardId=${board.id}`;
+    const declineLink = `${frontendUrl}/invite/decline?boardId=${board.id}`;
+
     await this.emailService.sendBoardInvitationEmail({
       to: user.email,
       boardTitle: board.title,
       inviterName: currentMember.user.name,
       roleName: role.name,
-      link: `${process.env.FRONTEND_URL || process.env.BACKEND_URL}/boards/${board.id}`,
+      link: acceptLink,
+      declineLink: declineLink,
+      // We will update email service to handle accept/decline links separately or just use 'link' as the main action
     });
 
     return {
       message: 'Member added to board successfully',
       member: savedMember,
     };
+  }
+
+  async respondToInvitation(boardId: string, userId: string, status: 'active' | 'declined') {
+    const member = await this.boardMemberRepository.findOne({
+      where: { boardId, userId },
+      relations: ['board'],
+    });
+
+    if (!member) throw new Error('Invitation not found');
+    if (member.status !== 'pending') throw new Error('Invitation is not pending');
+
+    if (status === 'declined') {
+      await this.boardMemberRepository.remove(member);
+      return { message: 'Invitation declined' };
+    }
+
+    member.status = 'active';
+    await this.boardMemberRepository.save(member);
+    await rbacProvider.clearCache(userId, boardId);
+
+    return { message: 'Invitation accepted', member };
   }
 
   async createLinkShareBoard(boardId: string, currentUserId: string) {
@@ -640,6 +708,24 @@ export class BoardService {
     return {
       message: 'Member removed successfully',
     };
+  }
+
+  async getCards(boardId: string, isArchived?: boolean) {
+    const qb = this.cardRepository
+      .createQueryBuilder('card')
+      .innerJoinAndSelect('card.list', 'list')
+      .innerJoin('list.board', 'board')
+      .where('board.id = :boardId', { boardId });
+
+    if (isArchived !== undefined) {
+      qb.andWhere('card.isArchived = :isArchived', { isArchived });
+    }
+
+    qb.leftJoinAndSelect('card.labels', 'labels')
+      .leftJoinAndSelect('card.members', 'members')
+      .orderBy('card.position', 'ASC');
+
+    return await qb.getMany();
   }
 
   async searchCardsInBoard(

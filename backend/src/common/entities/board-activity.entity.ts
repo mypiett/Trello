@@ -54,7 +54,10 @@ export class BoardActivity extends DateTimeEntity {
   @Column({ type: 'uuid', nullable: true })
   actorId: string | null;
 
-  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => User, (user) => user.boardActivities, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'actorId' })
   actor?: User | null;
 

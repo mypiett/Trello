@@ -8,36 +8,47 @@ import { ResetPasswordPage } from "@/pages/Auth/ResetPasswordPage";
 import BoardPage from "@/pages/Board/BoardPage";
 
 const LoginPage = lazy(() =>
-  import("@/pages/LoginPage/LoginPage").then(module => ({ default: module.LoginPage }))
+    import("@/pages/LoginPage/LoginPage").then(module => ({ default: module.LoginPage }))
 );
 const DashboardPage = lazy(() =>
-  import("@/pages/DashboardPage/DashboardPage")
+    import("@/pages/DashboardPage/DashboardPage")
+);
+const GoogleCallbackPage = lazy(() =>
+    import("@/pages/Auth/GoogleCallbackPage").then(module => ({ default: module.GoogleCallbackPage }))
 );
 const RegisterPage = lazy(() =>
-  import("@/pages/RegisterPage/RegisterPage").then(module => ({ default: module.RegisterPage }))
+    import("@/pages/RegisterPage/RegisterPage").then(module => ({ default: module.RegisterPage }))
 );
 const ProfilePage = lazy(() =>
-  import("@/pages/ProfilePage/ProfilePage").then(module => ({ default: module.ProfilePage }))
+    import("@/pages/ProfilePage/ProfilePage").then(module => ({ default: module.ProfilePage }))
 );
 const ProfileEditPage = lazy(() =>
-  import("@/pages/ProfilePage/ProfileEditPage").then(module => ({ default: module.ProfileEditPage }))
+    import("@/pages/ProfilePage/ProfileEditPage").then(module => ({ default: module.ProfileEditPage }))
 );
+const ArchivesPage = lazy(() => import("@/pages/Archives/ArchivesPage"));
+const SettingsPage = lazy(() => import("@/pages/Settings/SettingsPage"));
+const InviteResponsePage = lazy(() => import("@/pages/Invite/InviteResponsePage").then(module => ({ default: module.InviteResponsePage })));
 
 export const AppRouter = () => {
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path={ROUTES.HOME} element={<Navigate to={ROUTES.LOGIN} replace />} />
-        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-        <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile/edit" element={<ProfileEditPage />} />
-        <Route path="/verify" element={<VerifyPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/boards/:boardId" element={<BoardPage />} />
-      </Routes>
-    </Suspense>
-  );
+    return (
+        <Suspense fallback={<PageLoader />}>
+            <Routes>
+                <Route path={ROUTES.HOME} element={<Navigate to={ROUTES.LOGIN} replace />} />
+                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+                <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/profile/edit" element={<ProfileEditPage />} />
+                <Route path="/verify" element={<VerifyPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+                <Route path="/archives" element={<ArchivesPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/boards/:boardId" element={<BoardPage />} />
+                <Route path="/invite/accept" element={<InviteResponsePage />} />
+                <Route path="/invite/decline" element={<InviteResponsePage />} />
+            </Routes>
+        </Suspense>
+    );
 };

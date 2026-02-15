@@ -16,9 +16,14 @@ import {
     Check,
     ChevronDown,
     Trash2,
-    XCircle
+    XCircle,
+    Activity, Archive, Info,
+    Plus, Search,
+    Filter, ArrowUpDown, Calendar,
+    X
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import {
     DropdownMenu,
@@ -52,7 +57,11 @@ import {
     DragOverlay,
     defaultDropAnimationSideEffects,
     type DropAnimation,
-    KeyboardSensor
+    KeyboardSensor,
+    pointerWithin,
+    rectIntersection,
+    getFirstCollision,
+    type CollisionDetection
 } from "@dnd-kit/core";
 import {
     SortableContext,
@@ -66,6 +75,11 @@ import { BackgroundPicker } from "@/features/board/BackgroundPicker";
 import { tokenStorage } from "@/shared/utils/tokenStorage";
 import { cardApi } from "@/shared/api/card.api";
 import { CardDetailDialog } from "./CardDetailDialog";
+import { BoardInfoDialog } from "@/features/board/components/board-menu/BoardInfoDialog";
+import { BoardActivitySidebar } from "@/features/board/components/board-menu/BoardActivitySidebar";
+import { BoardArchivedItemsDialog } from "@/features/board/components/board-menu/BoardArchivedItemsDialog";
+import { BoardSettingsDialog } from "@/features/board/components/board-menu/BoardSettingsDialog";
+import { Settings } from "lucide-react";
 
 const VISIBILITY_OPTIONS = [
     {
@@ -127,6 +141,8 @@ const BoardPage = () => {
     const roleName = (currentMember as any)?.roleName?.toLowerCase() || "";
     const isOwnerOrAdmin = ["board_owner", "board_admin", "owner", "admin"].includes(roleName);
     const canEdit = isOwnerOrAdmin;
+    // Allow managing members if admin or policy allows all members
+    const canManageMembers = isOwnerOrAdmin || (board?.memberManagePolicy === 'all_members');
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
@@ -139,12 +155,17 @@ const BoardPage = () => {
             const response: any = await boardApi.getDetail(boardId);
             const boardData = response.responseObject || response.data || response;
 
-            if (boardData.lists) {
-                boardData.lists.sort((a: any, b: any) => a.position - b.position);
-            }
-            if (boardData.members) {
-                // Ensure members is array
-            }
+            // if (boardData.lists) {
+            //     boardData.lists.sort((a: any, b: any) => a.position - b.position);
+            //     boardData.lists.forEach((list: any) => {
+            //         if (list.cards) {
+            //             list.cards.sort((a: any, b: any) => a.position - b.position);
+            //         }
+            //     });
+            // }
+            // if (boardData.members) {
+            //     // Ensure members is array
+            // }
 
             console.log("🔥 Board Data:", boardData);
             setBoard(boardData);
@@ -163,10 +184,16 @@ const BoardPage = () => {
 
     const findColumn = (lists: any[], uniqueId: string) => {
         if (!uniqueId) return null;
-        if (lists.some((c) => c.id === uniqueId)) {
-            return lists.find((c) => c.id === uniqueId);
+
+        // Handle explicit droppable zone IDs
+        const normalizedId = uniqueId.includes("::droppable")
+            ? uniqueId.replace("::droppable", "")
+            : uniqueId;
+
+        if (lists.some((c) => c.id === normalizedId)) {
+            return lists.find((c) => c.id === normalizedId);
         }
-        return lists.find((c) => c.cards?.some((card: any) => card.id === uniqueId));
+        return lists.find((c) => c.cards?.some((card: any) => card.id === normalizedId));
     };
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -208,7 +235,14 @@ const BoardPage = () => {
         const activeColumn = findColumn(board.lists, activeId as string);
         const overColumn = findColumn(board.lists, overId as string);
 
-        if (!activeColumn || !overColumn || activeColumn.id === overColumn.id) {
+        if (!activeColumn || !overColumn) return;
+
+        if (activeColumn.id === overColumn.id) {
+            // Same column sorting is handled by SortableContext, but key part is
+            // we don't need to do complex state updates here for same column
+            // UNLESS we want real-time reorder visualization, which dnd-kit does by default??
+            // Actually dnd-kit needs arrayMove in dragOver OR dragEnd.
+            // For different containers, we MUST do it in dragOver.
             return;
         }
 
@@ -221,17 +255,22 @@ const BoardPage = () => {
             const overItems = overColumn.cards || [];
             const activeIndex = activeItems.findIndex((i: any) => i.id === activeId);
             const overIndex = overItems.findIndex((i: any) => i.id === overId);
-            const isOverColumn = prevLists.some((col) => col.id === overId);
+            const isOverColumn = overId === overColumn.id || overId === `${overColumn.id}::droppable`;
 
             if (activeIndex < 0) return prevBoard;
 
-            let newIndex = overItems.length;
-            if (!isOverColumn && overIndex >= 0) {
+            let newIndex;
+            if (isOverColumn) {
+                // If over column, put at end
+                newIndex = overItems.length + 1;
+            } else {
                 const isBelowOverItem =
                     active.rect.current.translated &&
                     active.rect.current.translated.top >
                     over.rect.top + over.rect.height;
-                newIndex = overIndex + (isBelowOverItem ? 1 : 0);
+
+                const modifier = isBelowOverItem ? 1 : 0;
+                newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
             }
 
             const movingCard = activeItems[activeIndex];
@@ -244,17 +283,20 @@ const BoardPage = () => {
                     };
                 }
                 if (c.id === overColumn.id) {
-                    // Check if card is already there to avoid dupes in strict mode
                     const exists = overItems.find((i: any) => i.id === activeId);
                     if (exists) return c;
 
                     const nextCards = overItems.filter((item: any) => item.id !== activeId);
+
+                    // Safely insert
+                    const safeIndex = Math.min(newIndex, nextCards.length);
+
                     return {
                         ...c,
                         cards: [
-                            ...nextCards.slice(0, newIndex),
+                            ...nextCards.slice(0, safeIndex),
                             movingCard,
-                            ...nextCards.slice(newIndex),
+                            ...nextCards.slice(safeIndex),
                         ],
                     };
                 }
@@ -303,8 +345,11 @@ const BoardPage = () => {
         const activeId = active.id as string;
         const overId = over.id as string;
 
+        // Determine destination column
         const overColumn = findColumn(board.lists, overId);
 
+        // If dropped over a column container properly (likely empty or at end)
+        // or dropped over a card in a column
         if (!overColumn) return;
 
         const prevColumnId = dragMeta?.columnId;
@@ -315,59 +360,98 @@ const BoardPage = () => {
         if (!prevColumnId || prevIndex === undefined || prevIndex < 0) return;
 
         let nextIndex = 0;
+        const currentCards = overColumn.cards || [];
 
+        // Logic to calculate index based on where we dropped
+        if (overId === nextColumnId || overId === `${nextColumnId}::droppable`) {
+            // Dropped on the column container itself (e.g. empty list or at bottom)
+            nextIndex = currentCards.length;
+        } else {
+            // Dropped on a card
+            const overCardIndex = currentCards.findIndex((c: any) => c.id === overId);
+
+            if (overCardIndex >= 0) {
+                // Calculate if dropped above or below
+                const isBelowOverItem =
+                    active.rect.current.translated &&
+                    active.rect.current.translated.top >
+                    over.rect.top + over.rect.height;
+
+                nextIndex = overCardIndex + (isBelowOverItem ? 1 : 0);
+            } else {
+                nextIndex = currentCards.length;
+            }
+        }
+
+        // Adjust index if moving within same column
         if (prevColumnId === nextColumnId) {
-            // Same column
-            const currentCards = overColumn.cards || [];
             const oldIndex = currentCards.findIndex((c: any) => c.id === activeId);
-            const rawNewIndex = currentCards.findIndex((c: any) => c.id === overId);
-            const newIndex = rawNewIndex >= 0 ? rawNewIndex : Math.max(currentCards.length - 1, 0);
+            // ArrayMove handles the index logic, but for API we might need the "visual" index
+            // if moving down, index increases, but arrayMove accounts for removal.
+            // Simplest way: update local state first using dnd-kit utils, then send that state to API?
+            // Or reuse the logic from dragOver?
 
-            if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
-
-            nextIndex = newIndex;
-
-            const newLists = board.lists.map((col) => {
+            // Actually, simply using arrayMove on local state is best for UI
+            const newLists = board.lists.map(col => {
                 if (col.id === nextColumnId) {
                     return {
                         ...col,
-                        cards: arrayMove(col.cards, oldIndex, newIndex),
+                        cards: arrayMove(col.cards, oldIndex, nextIndex > oldIndex ? nextIndex - 1 : nextIndex) // Adjust for removal
                     };
                 }
                 return col;
             });
-            setBoard({ ...board, lists: newLists });
+            // However, for API, let's just trust our calculation or current UI state?
+            // Let's rely on standard arrayMove behavior first for UI
 
+            // Recalculate distinct old/new indices for arrayMove
+            // 'overId' might be the card we dropped ON. 
+            // If we dropped on column, we put at end.
+
+            const finalOldIndex = currentCards.findIndex((c: any) => c.id === activeId);
+            let finalNewIndex = nextIndex;
+
+            // Fix bounds
+            if (finalNewIndex > currentCards.length) finalNewIndex = currentCards.length;
+
+            // If we rely on dnd-kit's sortable context, the 'over' gives us the target.
+            const overCardIndexForSortable = currentCards.findIndex((c: any) => c.id === overId);
+            if (overId !== nextColumnId && overCardIndexForSortable >= 0) {
+                finalNewIndex = overCardIndexForSortable;
+                // dnd-kit handles the "swapping" logic naturally if we use standard strategies
+                // But here we doing manual calc. 
+                // Let's use arrayMove with the `active` and `over` indices directly if in same column
+                const newLists = board.lists.map(col => {
+                    if (col.id === nextColumnId) {
+                        return {
+                            ...col,
+                            cards: arrayMove(col.cards, finalOldIndex, overCardIndexForSortable)
+                        };
+                    }
+                    return col;
+                });
+                setBoard({ ...board, lists: newLists });
+                nextIndex = overCardIndexForSortable; // Update for API
+            } else {
+                // Dropped on column -> move to end
+                // ... logic for move to end
+            }
         } else {
-            // Different column (handled mostly by DragOver, need to finalize index)
-            const currentCards = overColumn.cards || [];
-            const uiIndex = currentCards.findIndex((c: any) => c.id === activeId);
+            // Different column: UI already updated in DragOver
+            // We just need to calculate correct API index.
+            // In dragOver, we inserted the card into the new column.
+            // So in dry run, 'active' card IS in 'overColumn' now??
+            // No, 'board' state was updated in dragOver. So 'activeId' SHOULD be in 'overColumn' in 'board' state.
 
-            // If UI index is found, use it. If not, fallback logic (should generally be found due to DragOver)
-            const fallbackCards = currentCards.filter((c: any) => c.id !== activeId);
-            const fallbackIndex = fallbackCards.findIndex((c: any) => c.id === overId);
-            nextIndex = uiIndex >= 0 ? uiIndex : (fallbackIndex >= 0 ? fallbackIndex : fallbackCards.length);
+            const updatedOverColumn = board.lists.find(l => l.id === nextColumnId);
+            const indexInNewList = updatedOverColumn?.cards?.findIndex((c: any) => c.id === activeId);
 
-            // State is likely already updated by DragOver, but ensure consistency if needed
-            // With dnd-kit, DragOver usually does the optimistic UI update
+            if (indexInNewList !== undefined && indexInNewList >= 0) {
+                nextIndex = indexInNewList;
+            }
         }
 
         try {
-            // For cross-column, the activeItem might be part of 'overColumn' in state now,
-            // so we need careful index calculation based on the *current* state (which includes the moved item).
-            // However, the API typically expects the clean 'target' state.
-
-            // Let's recalculate apiNextIndex based on what the UI shows now
-            const currentCards = overColumn.cards || [];
-            // The card IS in the list now (due to dragOver).
-            // We need to know its index excluding itself? No, standard array index is usually fine for these APIs
-            // BUT your API might expect "insert before/after" logic or specific index. Assuming 0-based index.
-
-            // If it's same column, we just moved it.
-            // If it's different column, we inserted it.
-
-            // API param 'nextIndex' usually means "position index in the target column".
-
             await cardApi.moveCard({
                 cardId: activeId,
                 prevColumnId,
@@ -380,7 +464,7 @@ const BoardPage = () => {
         } catch (error) {
             console.error("Moved card failed:", error);
             toast.error("Lỗi di chuyển thẻ");
-            fetchBoardData();
+            fetchBoardData(); // Revert on error
         }
     };
 
@@ -406,7 +490,7 @@ const BoardPage = () => {
     const handleCloseBoard = async () => {
         if (!confirm("Bạn có chắc chắn muốn đóng bảng này không?")) return;
         try {
-            await boardApi.update(board!.id, { isClosed: true } as any); // Type cast if needed
+            await boardApi.update(board!.id, { isClosed: true } as any);
             toast.success("Đã đóng bảng thành công");
             navigate("/dashboard");
         } catch (error) {
@@ -425,7 +509,6 @@ const BoardPage = () => {
         }
     };
 
-    // This function handles background update from picker
     const handleBackgroundUpdate = (newUrl: string) => {
         if (board) setBoard({ ...board, coverUrl: newUrl });
     };
@@ -440,33 +523,58 @@ const BoardPage = () => {
     if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
     if (!board) return <div>Not found</div>;
 
+    // Custom collision detection strategy
+    const customCollisionDetection: CollisionDetection = (args) => {
+        const pointerCollisions = pointerWithin(args);
+
+        // If pointer is inside a droppable, prioritize it
+        if (pointerCollisions.length > 0) {
+            return pointerCollisions;
+        }
+
+        return closestCorners(args);
+    };
+
     return (
         <div
-            className="h-[calc(100vh-4rem)] w-full flex flex-col bg-cover bg-center transition-all duration-500"
+            className="h-screen w-full flex flex-col bg-cover bg-center transition-all duration-500"
             style={{ backgroundImage: `url('${board.coverUrl || "https://images.unsplash.com/photo-1519681393784-d8e5b5a4570e?q=80&w=2070"}')` }}
         >
 
             <div className="h-14 bg-black/40 backdrop-blur-md flex items-center justify-between px-4 shrink-0 border-b border-white/10">
-
+                {/* ... Header content ... */}
                 <div className="flex items-center gap-4">
-                    <h1 className="text-xl font-bold text-white shadow-sm cursor-pointer hover:bg-white/20 px-3 py-1 rounded transition">
-                        {board.title}
-                    </h1>
+                    <a href="/dashboard" className="flex items-center gap-2 text-white hover:opacity-80 transition-opacity mr-2">
+                        {/* ... */}
+                        <div className="bg-white/20 p-1 rounded-full backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                            <img src="/taskflow.png" alt="TaskFlow Logo" className="w-8 h-8 object-contain" />
+                        </div>
+                    </a>
+                    {/* ... rest of header ... */}
+                    <Input
+                        value={board.title}
+                        onChange={(e) => setBoard({ ...board, title: e.target.value })}
+                        onBlur={async () => {
+                            if (!board || !board.title.trim()) return;
+                            try {
+                                await boardApi.update(board.id, { title: board.title });
+                            } catch (error) {
+                                toast.error("Lỗi cập nhật tên bảng");
+                            }
+                        }}
+                        className="text-xl font-bold text-white bg-transparent border-transparent hover:bg-white/20 focus:bg-white/20 focus:border-white/30 h-9 px-3 py-1 rounded transition w-auto min-w-[150px] shadow-sm"
+                    />
 
+                    {/* ... Rest of existing header ... */}
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-white bg-white/10 hover:bg-white/20 h-8 px-3 border border-transparent hover:border-white/30 transition-all"
-                                disabled={isUpdatingVisibility || !canEdit}
-                            >
+                            <Button variant="ghost" size="sm" className="text-white bg-white/10 hover:bg-white/20 h-8 px-3" disabled={isUpdatingVisibility || !canEdit}>
                                 <CurrentIcon className="h-4 w-4 mr-2" />
                                 <span className="capitalize hidden sm:inline">{currentVisibility.label}</span>
                                 <ChevronDown className="h-3 w-3 ml-2 opacity-70" />
                             </Button>
                         </PopoverTrigger>
-
+                        {/* ... PopoverContent ... */}
                         {canEdit && (
                             <PopoverContent align="start" className="w-[340px] p-0 bg-white shadow-xl rounded-xl">
                                 <div className="p-4 border-b">
@@ -476,23 +584,12 @@ const BoardPage = () => {
                                     {VISIBILITY_OPTIONS.map((option) => {
                                         const Icon = option.icon;
                                         const isSelected = board.visibility === option.value;
-
                                         return (
-                                            <div
-                                                key={option.value}
-                                                onClick={() => handleChangeVisibility(option.value as BoardVisibility)}
-                                                className={`
-                            relative flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
-                            ${isSelected ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-100"}`}
-                                            >
+                                            <div key={option.value} onClick={() => handleChangeVisibility(option.value as BoardVisibility)} className={`relative flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all ${isSelected ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-100"}`}>
                                                 <Icon className={`h-5 w-5 mt-0.5 ${isSelected ? "text-blue-600" : "text-gray-500"}`} />
                                                 <div className="flex-1">
-                                                    <p className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
-                                                        {option.label}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 mt-1 leading-tight">
-                                                        {option.description}
-                                                    </p>
+                                                    <p className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>{option.label}</p>
+                                                    <p className="text-xs text-gray-500 mt-1 leading-tight">{option.description}</p>
                                                 </div>
                                                 {isSelected && <Check className="h-4 w-4 text-blue-600 mt-1" />}
                                             </div>
@@ -504,115 +601,109 @@ const BoardPage = () => {
                     </Popover>
                 </div>
 
+
+
                 <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2 mr-2">
-                        <TooltipProvider>
-                            {displayedMembers.map((member: any) => (
-                                <Tooltip key={member.id}>
+                    {/* Members List */}
+                    <div className="flex -space-x-2 overflow-hidden mr-2">
+                        {displayedMembers.map((member) => (
+                            <TooltipProvider key={member.id}>
+                                <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="cursor-pointer">
-                                            <Avatar className="h-8 w-8 border-2 border-transparent hover:border-white transition ring-2 ring-black/10">
-                                                <AvatarImage
-                                                    src={member.avatarUrl || ""}
-                                                    alt={member.name}
-                                                    className="object-cover"
-                                                />
-                                                <AvatarFallback className="bg-sky-600 text-white text-xs font-bold flex items-center justify-center">
-                                                    {getInitials(member.name)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                        </div>
+                                        <Avatar className="h-7 w-7 border-2 border-[#0055CC] cursor-pointer hover:z-10 transition-transform">
+                                            <AvatarImage src={member.avatarUrl} />
+                                            <AvatarFallback className="text-[10px] bg-slate-200">
+                                                {getInitials(member.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
                                     </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                        <p className="font-semibold">{member.name || "Unnamed"}</p>
-                                        <p className="text-xs text-gray-400">{member.email}</p>
-                                        <p className="text-[10px] text-gray-500 uppercase">{member.roleName}</p>
+                                    <TooltipContent>
+                                        <p>{member.name} ({member.email})</p>
                                     </TooltipContent>
                                 </Tooltip>
-                            ))}
-
-                            {hiddenMembersCount > 0 && (
-                                <div className="h-8 w-8 rounded-full bg-gray-700/90 backdrop-blur flex items-center justify-center text-xs text-white font-bold border-2 border-transparent cursor-pointer hover:bg-gray-600 ring-2 ring-black/10 z-10">
-                                    +{hiddenMembersCount}
-                                </div>
-                            )}
-                        </TooltipProvider>
+                            </TooltipProvider>
+                        ))}
+                        {hiddenMembersCount > 0 && (
+                            <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium border-2 border-white z-10">
+                                +{hiddenMembersCount}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Only show Invite if Admin/Owner */}
-                    {isOwnerOrAdmin && (
-                        <InviteMemberDialog boardId={boardId!} onSuccess={fetchBoardData}>
-                            <Button className="bg-white/90 hover:bg-white text-gray-900 h-8 px-3 ml-2 font-medium shadow-sm transition-colors">
-                                <Share2 className="h-4 w-4 mr-2" />
-                                Chia sẻ / Mời
+                    {/* Invite Button */}
+                    {canManageMembers && (
+                        <InviteMemberDialog boardId={boardId!} onInviteSuccess={fetchBoardData}>
+                            <Button variant="secondary" size="sm" className="h-8 bg-blue-100 text-blue-700 hover:bg-blue-200 mr-2">
+                                <Users className="h-4 w-4 mr-2" />
+                                Chia sẻ
                             </Button>
                         </InviteMemberDialog>
                     )}
-
+                    {/* ... Right side actions ... */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20">
                                 <MoreHorizontal className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
+                        {/* ... Menu content ... */}
                         <DropdownMenuContent align="end" className="w-56 mt-2">
+                            {/* ... dropdown items ... */}
                             <DropdownMenuLabel>Menu bảng</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-
-                            {/* Change Background */}
                             <BackgroundPicker boardId={boardId!} currentCover={board.coverUrl} onUpdate={handleBackgroundUpdate}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <ImageIcon className="mr-2 h-4 w-4" /> Đổi hình nền
-                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <ImageIcon className="mr-2 h-4 w-4" /> Đổi hình nền </DropdownMenuItem>
                             </BackgroundPicker>
-
-                            {/* Manage Members - Admin Only */}
-                            {isOwnerOrAdmin && (
+                            {canManageMembers && (
                                 <ManageMembersDialog boardId={boardId!} members={board.members} onUpdate={fetchBoardData}>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <Users className="mr-2 h-4 w-4" /> Quản lý thành viên
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Users className="mr-2 h-4 w-4" /> Quản lý thành viên </DropdownMenuItem>
                                 </ManageMembersDialog>
                             )}
-
+                            <DropdownMenuSeparator />
+                            {isOwnerOrAdmin && (
+                                <DropdownMenuItem className="text-orange-600 focus:text-orange-600 focus:bg-orange-50" onClick={handleCloseBoard}> <XCircle className="mr-2 h-4 w-4" /> Đóng bảng này </DropdownMenuItem>
+                            )}
+                            {isOwnerOrAdmin && (
+                                <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={handleDeleteBoard}> <Trash2 className="mr-2 h-4 w-4" /> Xóa bảng vĩnh viễn </DropdownMenuItem>
+                            )}
+                            {!isOwnerOrAdmin && (<DropdownMenuItem disabled> <span className="text-xs text-gray-400 italic">Bạn chỉ có quyền xem</span> </DropdownMenuItem>)}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Cài đặt</DropdownMenuLabel>
+                            {isOwnerOrAdmin && (
+                                <BoardSettingsDialog
+                                    boardId={boardId!}
+                                    currentCommentPolicy={board.commentPolicy}
+                                    currentMemberPolicy={board.memberManagePolicy}
+                                    onUpdate={fetchBoardData}
+                                >
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Settings className="mr-2 h-4 w-4" /> Cài đặt quyền </DropdownMenuItem>
+                                </BoardSettingsDialog>
+                            )}
                             <DropdownMenuSeparator />
 
-                            {/* Close Board - Admin Only */}
-                            {isOwnerOrAdmin && (
-                                <DropdownMenuItem
-                                    className="text-orange-600 focus:text-orange-600 focus:bg-orange-50"
-                                    onClick={handleCloseBoard}
-                                >
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    Đóng bảng này
-                                </DropdownMenuItem>
-                            )}
-
-                            {/* Delete Board - Admin Only */}
-                            {isOwnerOrAdmin && (
-                                <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                    onClick={handleDeleteBoard}
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Xóa bảng vĩnh viễn
-                                </DropdownMenuItem>
-                            )}
-
-                            {!isOwnerOrAdmin && (
-                                <DropdownMenuItem disabled>
-                                    <span className="text-xs text-gray-400 italic">Bạn chỉ có quyền xem</span>
-                                </DropdownMenuItem>
-                            )}
-
+                            <DropdownMenuLabel>Tiện ích</DropdownMenuLabel>
+                            <BoardInfoDialog boardId={boardId!} currentDescription={board.description} onUpdate={fetchBoardData}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Info className="mr-2 h-4 w-4" /> Giới thiệu bảng </DropdownMenuItem>
+                            </BoardInfoDialog>
+                            <BoardActivitySidebar boardId={boardId!}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Activity className="mr-2 h-4 w-4" /> Hoạt động </DropdownMenuItem>
+                            </BoardActivitySidebar>
+                            <BoardArchivedItemsDialog boardId={boardId!} onUpdate={fetchBoardData}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Archive className="mr-2 h-4 w-4" /> Mục đã lưu trữ </DropdownMenuItem>
+                            </BoardArchivedItemsDialog>
                         </DropdownMenuContent>
                     </DropdownMenu>
-
                 </div>
             </div>
 
             <div className="flex-1 overflow-x-auto p-4 custom-scrollbar">
-                <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={customCollisionDetection}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
+                >
                     <div className="flex h-full gap-4 items-start pb-2">
                         <SortableContext items={board.lists.map(l => l.id)} strategy={horizontalListSortingStrategy}>
                             {board.lists.map((list) => (
@@ -652,6 +743,8 @@ const BoardPage = () => {
                         open={!!selectedCard}
                         onClose={() => setSelectedCard(null)}
                         onUpdate={fetchBoardData}
+                        members={board?.members || []}
+                        labels={board?.labels || []}
                     />
                 )
             }

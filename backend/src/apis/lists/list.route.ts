@@ -10,6 +10,7 @@ import {
   MoveAllCardsSchema,
   CopyListSchema,
   EditListName,
+  UpdateListSchema,
   ReorderList,
 } from './list.schema';
 import { requireBoardMember } from '@/common/middleware/requireBoardMember.middleware';
@@ -308,8 +309,8 @@ route.post(
  *   patch:
  *     tags:
  *       - Lists
- *     summary: Edit list name
- *     description: Update the title of a specific list
+ *     summary: Update list
+ *     description: Update specific fields of a list (title, isArchived)
  *     parameters:
  *       - in: path
  *         name: id
@@ -324,15 +325,16 @@ route.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - title
  *             properties:
  *               title:
  *                 type: string
  *                 example: "New List Title"
+ *               isArchived:
+ *                 type: boolean
+ *                 example: true
  *     responses:
  *       200:
- *         description: List name updated successfully
+ *         description: List updated successfully
  *       400:
  *         description: Invalid input
  *       403:
@@ -340,10 +342,8 @@ route.post(
  *       404:
  *         description: List not found
  */
-route.patch('/:id', validateRequest(EditListName), async (req, res) => {
-  const listId = req.params.id;
-  const { title } = req.body;
-  const response = await ListController.editListTitle(listId, title);
+route.patch('/:id', validateRequest(UpdateListSchema), async (req, res) => {
+  const response = await ListController.updateList(req);
   return handleServiceResponse(response, res);
 });
 
@@ -432,5 +432,44 @@ route.get('/:id/cards', validateRequest(ListIdSchema), async (req, res) => {
   const response = await ListController.getAllCardsInList(listId);
   return handleServiceResponse(response, res);
 });
+
+
+
+/**
+ * @swagger
+ * /lists/{id}:
+ *   delete:
+ *     tags:
+ *       - Lists
+ *     summary: Delete a list
+ *     description: Permanently delete a list and all its cards
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: List ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List deleted successfully
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Permission denied
+ *       404:
+ *         description: List not found
+ */
+route.delete(
+  '/:id',
+  validateRequest(ListIdSchema),
+  requireListPermissions(PERMISSIONS.LISTS_DELETE),
+  async (req, res) => {
+    const listId = req.params.id;
+    const response = await ListController.deleteList(listId);
+    return handleServiceResponse(response, res);
+  }
+);
 
 export default route;

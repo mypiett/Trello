@@ -545,6 +545,52 @@ route.post(
 
 /**
  * @swagger
+ * /boards/{id}/invitations/respond:
+ *   post:
+ *     tags:
+ *       - Boards
+ *     summary: Respond to board invitation
+ *     description: Accept or decline a board invitation.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the board
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, declined]
+ *     responses:
+ *       200:
+ *         description: Invitation responded successfully
+ *       400:
+ *         description: Invalid status or other error
+ *       401:
+ *         description: Unauthorized
+ */
+route.post(
+  '/:id/invitations/respond',
+  authenticateJWT,
+  async (req, res) => {
+    const serviceResponse = await BoardController.respondToInvitation(req);
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+/**
+ * @swagger
  * /boards/{id}/generate-link:
  *   post:
  *     tags:
@@ -1015,6 +1061,41 @@ route.delete('/:id/members/:userId', authenticateJWT, async (req, res) => {
 
 /**
  * @swagger
+ * /boards/{id}/cards:
+ *   get:
+ *     tags:
+ *       - Boards
+ *     summary: Get all cards in a board
+ *     description: Retrieve all cards in a board, efficiently.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Board ID
+ *       - in: query
+ *         name: archived
+ *         description: Filter by archived status (true/false)
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Cards retrieved successfully
+ */
+route.get(
+  '/:id/cards',
+  authenticateJWT,
+  checkBoardAccess('id'),
+  requireBoardPermissions(PERMISSIONS.CARDS_READ),
+  async (req, res) => {
+    const serviceResponse = await BoardController.getCards(req);
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+/**
+ * @swagger
  * /boards/{id}/cards/search:
  *   get:
  *     tags:
@@ -1116,9 +1197,9 @@ route.get(
  *         description: Forbidden
  */
 route.get(
-  '/:boardId/activity',
+  '/:boardId/activities',
   authenticateJWT,
-  checkBoardAccess(),
+  checkBoardAccess('boardId'),
   async (req, res) => {
     const serviceResponse = await BoardController.getActivity(req);
     return handleServiceResponse(serviceResponse, res);

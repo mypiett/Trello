@@ -10,9 +10,10 @@ const listService = new ListService();
 
 export class ListController {
   static async getAllListsByBoard(req: Request) {
-    const { boardId } = req.params;
+    const boardId = req.params.boardId as string;
+    const isArchived = req.query.archived === 'true';
     try {
-      const lists = await listService.getAllListsByBoard(boardId);
+      const lists = await listService.getAllListsByBoard(boardId, isArchived);
       return new ServiceResponse(
         ResponseStatus.Success,
         'Get all lists successfully',
@@ -31,7 +32,7 @@ export class ListController {
 
   static async createList(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const boardId = req.params.boardId;
+      const boardId = req.params.boardId as string;
       const currentUserId = req.user?.userId;
       const { title } = req.body;
       if (!currentUserId) {
@@ -259,6 +260,27 @@ export class ListController {
     }
   }
 
+  static async updateList(req: Request): Promise<ServiceResponse<any>> {
+    const listId = req.params.id as string;
+    const updateData = req.body;
+    try {
+      const result = await listService.updateList(listId, updateData);
+      return new ServiceResponse(
+        ResponseStatus.Success,
+        'List updated successfully',
+        result,
+        StatusCodes.OK
+      );
+    } catch (error) {
+      return new ServiceResponse(
+        ResponseStatus.Failed,
+        error.message,
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
   static async getAllCardsInList(
     listId: string
   ): Promise<ServiceResponse<any>> {
@@ -271,6 +293,25 @@ export class ListController {
         StatusCodes.OK
       );
     } catch (error: any) {
+      return new ServiceResponse(
+        ResponseStatus.Failed,
+        error.message,
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
+  static async deleteList(listId: string): Promise<ServiceResponse<any>> {
+    try {
+      const result = await listService.deleteList(listId);
+      return new ServiceResponse(
+        ResponseStatus.Success,
+        'List deleted successfully',
+        result,
+        StatusCodes.OK
+      );
+    } catch (error) {
       return new ServiceResponse(
         ResponseStatus.Failed,
         error.message,

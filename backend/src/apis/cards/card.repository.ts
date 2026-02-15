@@ -182,6 +182,7 @@ export class CardRepository {
       relations: ['members'],
       select: {
         id: true,
+        boardId: true,
         title: true,
         members: {
           id: true,

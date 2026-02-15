@@ -2,6 +2,7 @@ import { ListRepository } from '@/apis/lists/list.repository';
 import { CardRepository } from './card.repository';
 import { NotificationService } from '@/apis/notification/notification.service';
 import { NotificationType } from '@/common/entities/notification.entity';
+import { boardActivityService } from '../boards/board-activity.service';
 
 export class CardService {
   private cardRepository = new CardRepository();
@@ -86,13 +87,13 @@ export class CardService {
       },
       cardSourceId
         ? {
-            sourceCardId: cardSourceId,
-            copyMembers,
-            copyLabels,
-            copyComments,
-            copyAttachments,
-            copyChecklists,
-          }
+          sourceCardId: cardSourceId,
+          copyMembers,
+          copyLabels,
+          copyComments,
+          copyAttachments,
+          copyChecklists,
+        }
         : undefined,
       userId
     );
@@ -318,6 +319,18 @@ export class CardService {
         excludeUserId: userId,
       });
     }
+
+    await boardActivityService.logActivity({
+      boardId: card.boardId,
+      actorId: userId,
+      actionType: 'COMMENT_ADDED',
+      targetType: 'CARD',
+      targetId: cardId,
+      metadata: {
+        cardTitle: card.title,
+        text: text,
+      },
+    });
 
     return action;
   }

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/ui/dialog";
-import { Button } from "@/shared/ui/button";
 import { boardApi } from "@/shared/api/board.api";
 import { Check, Upload, Loader2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -12,29 +11,22 @@ interface BackgroundPickerProps {
     children?: React.ReactNode;
 }
 
-const PRESET_COLORS = [
-    "https://images.unsplash.com/photo-1519681393784-d8e5b5a4570e?q=80&w=2070", // Starry Night
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1948", // Nature
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073", // Beach
-    "https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=1941", // Architecture
-    "bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500",
-    "bg-gradient-to-r from-blue-400 to-emerald-400",
-    "bg-slate-900",
-    "bg-blue-600"
-];
-
 // Note: For gradients/colors, we might need to handle them differently in BoardPage if they aren't URLs. 
 // For now assuming we stick to Image URLs for simplicity or I need to update BoardPage to handle ClassNames/Colors.
 // The user's BoardPage uses `backgroundImage: url(...)` so I should stick to URLs for now or refactor BoardPage.
 // I will provide Image URLs for presets. 
 
 const PRESET_IMAGES = [
-    "https://images.unsplash.com/photo-1519681393784-d8e5b5a4570e?q=80&w=2070",
     "https://images.unsplash.com/photo-1477346611705-65d1883cee1e?q=80&w=2070",
     "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070",
     "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=2070",
     "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072",
-    "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=1944"
+    "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=1944",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070",
+    "https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?q=80&w=2070",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2070",
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2070",
+    "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=2070",
 ];
 
 export function BackgroundPicker({ boardId, currentCover, onUpdate, children }: BackgroundPickerProps) {
@@ -105,6 +97,20 @@ export function BackgroundPicker({ boardId, currentCover, onUpdate, children }: 
                                 disabled={uploading}
                             />
                         </label>
+                    </div>
+
+                    {/* Default Option */}
+                    <div
+                        onClick={() => handleSelectPreset("https://images.unsplash.com/photo-1519681393784-d8e5b5a4570e?q=80&w=2070")}
+                        className="relative aspect-video rounded-lg overflow-hidden cursor-pointer group hover:ring-2 ring-sky-500 transition flex items-center justify-center bg-gray-100"
+                    >
+                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                        <span className="absolute bottom-2 text-xs font-medium text-gray-500">Mặc định</span>
+                        {currentCover === "https://images.unsplash.com/photo-1519681393784-d8e5b5a4570e?q=80&w=2070" && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <Check className="text-white h-8 w-8" />
+                            </div>
+                        )}
                     </div>
 
                     {PRESET_IMAGES.map((url, index) => (

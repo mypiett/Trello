@@ -8,8 +8,8 @@ export class ListService {
   private listRepository = new ListRepository();
   private boardRepository = new BoardRepository();
   private boardMemberRepository = AppDataSource.getRepository(BoardMembers);
-  async getAllListsByBoard(boardId: string): Promise<List[]> {
-    return await this.listRepository.getAllListsByBoard(boardId);
+  async getAllListsByBoard(boardId: string, isArchived: boolean = false): Promise<List[]> {
+    return await this.listRepository.getAllListsByBoard(boardId, isArchived);
   }
 
   async createList(boardId: string, title: string, currentUserId: string) {
@@ -276,6 +276,15 @@ export class ListService {
     return result;
   }
 
+  async updateList(listId: string, data: { title?: string; isArchived?: boolean }) {
+    const list = await this.listRepository.findListById(listId, false);
+    if (!list) {
+      throw new Error('List not found');
+    }
+    const result = await this.listRepository.updateList(listId, data as any);
+    return result;
+  }
+
   async getAllCardsInList(listId: string) {
     // Kiểm tra list tồn tại
     const list = await this.listRepository.findListById(listId, false);
@@ -285,5 +294,14 @@ export class ListService {
     // Lấy tất cả cards trong list
     const cards = await this.listRepository.getCardsByList(listId, false);
     return cards;
+  }
+
+  async deleteList(listId: string) {
+    const list = await this.listRepository.findListById(listId, false);
+    if (!list) {
+      throw new Error('List not found');
+    }
+    await this.listRepository.deleteList(listId);
+    return { message: 'List deleted successfully' };
   }
 }
