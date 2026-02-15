@@ -153,7 +153,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, isLoading, error 
                         </div>
 
                         <a
-                            href={`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/auth/google`}
+                            href={`${import.meta.env.VITE_API_URL}/auth/google`}
                             className="w-full flex items-center justify-center gap-3 py-2.5 bg-white hover:bg-gray-100 text-gray-800 rounded-lg transition-all duration-300 font-medium shadow-sm hover:shadow-md active:scale-[0.98]"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">

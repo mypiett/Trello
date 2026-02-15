@@ -14,11 +14,14 @@ const PORT = Number(process.env.PORT);
 app.use(
   cors({
     // origin: 'http://localhost:5173',
-    origin: true,
+    origin: '*',
     credentials: true,
   })
 );
 app.use(cookieParser());
+app.get('/ping', (req, res) => {
+  res.status(200).json({ message: 'pong' });
+});
 app.use('', AppRoute);
 
 AppDataSource.initialize()

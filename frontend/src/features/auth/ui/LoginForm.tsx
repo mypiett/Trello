@@ -153,7 +153,7 @@ export const LoginForm = ({ onSuccess }: OAuthFormProps) => {
                 </div>
 
                 <a
-                  href={`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/auth/google`}
+                  href={`${import.meta.env.VITE_API_URL}/auth/google`}
                   // Giảm padding một xíu
                   className="w-full flex items-center justify-center gap-3 py-2 bg-white hover:bg-gray-100 text-gray-800 rounded-lg transition-all duration-300 font-medium shadow-sm hover:shadow-md active:scale-[0.98] text-sm"
                 >
