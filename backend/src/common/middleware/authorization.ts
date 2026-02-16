@@ -11,31 +11,22 @@ interface AuthorizationOptions {
   allowPublic?: boolean;
   errorMessage?: string;
 }
-const getBoardIdFromRequest = (req: Request): string | undefined => {
-  return (
-    (req.params as any).boardId || // /boards/:boardId/...
-    (req.params as any).id || // /boards/:id/... (các route cũ)
-    (req.query.boardId as string | undefined) ||
-    (req.body.boardId as string | undefined)
-  );
-};
+
+// Helper for type safety
+function getParam(req: Request, source: 'params' | 'body' | 'query', field: string): string | null {
+  const anyReq = req as any;
+  if (source === 'params') return anyReq.params[field] || null;
+  if (source === 'body') return anyReq.body[field] || null;
+  if (source === 'query') return (req.query[field] as string) || null;
+  return null;
+}
 
 function getResourceId(
   req: Request,
   options: AuthorizationOptions
 ): string | null {
   const { resourceIdSource, resourceIdField } = options;
-
-  switch (resourceIdSource) {
-    case 'params':
-      return req.params[resourceIdField] || null;
-    case 'body':
-      return req.body[resourceIdField] || null;
-    case 'query':
-      return (req.query[resourceIdField] as string) || null;
-    default:
-      return null;
-  }
+  return getParam(req, resourceIdSource, resourceIdField);
 }
 
 export function authorize(options: AuthorizationOptions) {
@@ -197,18 +188,7 @@ export function requireWorkspaceRoles(
         });
       }
 
-      let workspaceId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          workspaceId = req.params[idField];
-          break;
-        case 'body':
-          workspaceId = req.body[idField];
-          break;
-        case 'query':
-          workspaceId = req.query[idField] as string;
-          break;
-      }
+      let workspaceId: string | null = getParam(req, idSource, idField);
 
       if (!workspaceId) {
         return res.status(400).json({
@@ -268,18 +248,7 @@ export function requireBoardRole(
         });
       }
 
-      let boardId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          boardId = req.params[idField];
-          break;
-        case 'body':
-          boardId = req.body[idField];
-          break;
-        case 'query':
-          boardId = req.query[idField] as string;
-          break;
-      }
+      let boardId: string | null = getParam(req, idSource, idField);
 
       if (!boardId) {
         return res.status(400).json({
@@ -382,18 +351,7 @@ export function requireWorkspacePermissions(
         });
       }
 
-      let workspaceId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          workspaceId = req.params[idField];
-          break;
-        case 'body':
-          workspaceId = req.body[idField];
-          break;
-        case 'query':
-          workspaceId = req.query[idField] as string;
-          break;
-      }
+      let workspaceId: string | null = getParam(req, idSource, idField);
 
       if (!workspaceId) {
         return res.status(400).json({
@@ -474,18 +432,7 @@ export function requireBoardPermissions(
         });
       }
 
-      let boardId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          boardId = req.params[idField];
-          break;
-        case 'body':
-          boardId = req.body[idField];
-          break;
-        case 'query':
-          boardId = req.query[idField] as string;
-          break;
-      }
+      let boardId: string | null = getParam(req, idSource, idField);
 
       if (!boardId) {
         return res.status(400).json({
@@ -555,18 +502,7 @@ export function requireListPermissions(
       }
 
       // Lấy listId
-      let listId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          listId = req.params[listIdField];
-          break;
-        case 'body':
-          listId = req.body[listIdField];
-          break;
-        case 'query':
-          listId = req.query[listIdField] as string;
-          break;
-      }
+      let listId: string | null = getParam(req, idSource, listIdField);
 
       if (!listId) {
         return res.status(400).json({
@@ -646,18 +582,7 @@ export function requireCardPermissions(
         });
       }
 
-      let cardId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          cardId = req.params[cardIdField];
-          break;
-        case 'body':
-          cardId = req.body[cardIdField];
-          break;
-        case 'query':
-          cardId = req.query[cardIdField] as string;
-          break;
-      }
+      let cardId: string | null = getParam(req, idSource, cardIdField);
 
       if (!cardId) {
         return res.status(400).json({
@@ -735,18 +660,7 @@ export function requireListRole(
         });
       }
 
-      let listId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          listId = req.params[listIdField];
-          break;
-        case 'body':
-          listId = req.body[listIdField];
-          break;
-        case 'query':
-          listId = req.query[listIdField] as string;
-          break;
-      }
+      let listId: string | null = getParam(req, idSource, listIdField);
 
       if (!listId) {
         return res.status(400).json({
@@ -827,18 +741,7 @@ export function requireCardRole(
         });
       }
 
-      let cardId: string | null = null;
-      switch (idSource) {
-        case 'params':
-          cardId = req.params[cardIdField];
-          break;
-        case 'body':
-          cardId = req.body[cardIdField];
-          break;
-        case 'query':
-          cardId = req.query[cardIdField] as string;
-          break;
-      }
+      let cardId: string | null = getParam(req, idSource, cardIdField);
 
       if (!cardId) {
         return res.status(400).json({

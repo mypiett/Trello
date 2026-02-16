@@ -36,7 +36,7 @@ export class RoleController {
   // Get roles by group
   async getRolesByGroup(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { group } = req.params;
+      const { group } = req.params as any;
       const roles = await this.roleService.getRolesByGroup(group);
 
       return {
@@ -79,7 +79,7 @@ export class RoleController {
   // Get role by ID
   async getRoleById(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as any;
       const role = await this.roleService.getRoleById(id);
 
       return {
@@ -101,7 +101,7 @@ export class RoleController {
   // Get role by name
   async getRoleByName(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { name } = req.params;
+      const { name } = req.params as any;
       const role = await this.roleService.getRoleByName(name);
 
       return {

@@ -32,7 +32,7 @@ export class UserController {
 
   static async getDetailUser(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const userId = req.params.id;
+      const userId = req.params.id as string;
       const user = await userService.getDetailUser(userId);
 
       if (!user) {

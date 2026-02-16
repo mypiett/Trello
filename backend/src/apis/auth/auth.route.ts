@@ -113,7 +113,7 @@ route.post(
   '/verify-email',
   validateHandle(VerifyEmailSchema), // ✅ Schema này phải khớp với body { email, otp }
   async (req, res) => {
-    const serviceResponse = await AuthController.verifyEmail(req, res);
+    const serviceResponse = await AuthController.verifyEmail(req);
     return handleServiceResponse(serviceResponse, res);
   }
 );

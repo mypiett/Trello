@@ -48,7 +48,7 @@ export class CommentController {
 
   static async listByCard(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { cardId } = req.params;
+      const { cardId } = req.params as any;
 
       if (!cardId) {
         return new ServiceResponse(
@@ -79,7 +79,7 @@ export class CommentController {
 
   static async update(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as any;
       const userId = req.user?.userId;
       const { content } = req.body;
 
@@ -113,7 +113,7 @@ export class CommentController {
 
   static async delete(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as any;
       const userId = req.user?.userId;
 
       await commentService.deleteComment(id, userId);

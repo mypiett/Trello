@@ -76,7 +76,7 @@ export class CommentService {
     const comment = this.commentRepo.create({
       content,
       card,
-      user,
+      author: user,
     } as any);
 
     return this.commentRepo.save(comment);
@@ -85,7 +85,7 @@ export class CommentService {
   async getCommentsByCard(cardId: string) {
     const comments = await this.commentRepo.find({
       where: { card: { id: cardId } as any },
-      relations: ['user'],
+      relations: ['author'],
       order: { createdAt: 'ASC' },
     });
 
@@ -94,12 +94,12 @@ export class CommentService {
       content: (c as any).content,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
-      author: c.user
+      author: c.author
         ? {
-            id: c.user.id,
-            name: c.user.name,
-            email: c.user.email,
-          }
+          id: c.author.id,
+          name: c.author.name,
+          email: c.author.email,
+        }
         : null,
     }));
   }
@@ -108,7 +108,7 @@ export class CommentService {
     const comment = await this.commentRepo.findOne({
       where: { id: commentId },
       relations: [
-        'user',
+        'author',
         'card',
         'card.list',
         'card.list.board',
@@ -133,7 +133,7 @@ export class CommentService {
     const isModerator = await this.isCommentModerator(boardId, userId);
     const isOwner = (comment as any).userId
       ? (comment as any).userId === userId
-      : comment.user?.id === userId;
+      : comment.author?.id === userId;
 
     if (!isOwner && !isModerator) {
       const err: any = new Error('You are not allowed to edit this comment');
@@ -150,7 +150,7 @@ export class CommentService {
     const comment = await this.commentRepo.findOne({
       where: { id: commentId },
       relations: [
-        'user',
+        'author',
         'card',
         'card.list',
         'card.list.board',
@@ -175,7 +175,7 @@ export class CommentService {
     const isModerator = await this.isCommentModerator(boardId, userId);
     const isOwner = (comment as any).userId
       ? (comment as any).userId === userId
-      : comment.user?.id === userId;
+      : comment.author?.id === userId;
 
     if (!isOwner && !isModerator) {
       const err: any = new Error('You are not allowed to delete this comment');

@@ -11,7 +11,7 @@ const cardService = new CardService();
 export class CardController {
   static async getCard(req: Request): Promise<ServiceResponse> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const query = req.query;
       const card = await cardService.getCard(cardId, query);
       return new ServiceResponse(
@@ -53,7 +53,7 @@ export class CardController {
 
   static async updateCard(req: Request): Promise<ServiceResponse> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const updateData = req.body;
       const userId = (req as any).user?.userId;
       const updatedCard = await cardService.updateCard(
@@ -79,7 +79,7 @@ export class CardController {
 
   static async deleteCard(req: Request): Promise<ServiceResponse> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       await cardService.deleteCard(cardId);
       return new ServiceResponse(
         ResponseStatus.Success,
@@ -99,7 +99,7 @@ export class CardController {
 
   static async addLabelToCard(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, labelId } = req.params;
+      const { id, labelId } = req.params as any;
       const userId = (req as any).user?.userId;
       const updatedCard = await cardService.addLabelToCard(id, labelId, userId);
       return new ServiceResponse(
@@ -120,7 +120,7 @@ export class CardController {
 
   static async removeLabelFromCard(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, labelId } = req.params;
+      const { id, labelId } = req.params as any;
       const userId = (req as any).user?.userId;
       const updatedCard = await cardService.removeLabelFromCard(
         id,
@@ -145,7 +145,7 @@ export class CardController {
 
   static async addMemberToCard(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, memberId } = req.params;
+      const { id, memberId } = req.params as any;
       const userId = (req as any).user?.userId;
       await cardService.addMemberToCard(id, memberId, userId);
       return new ServiceResponse(
@@ -166,7 +166,7 @@ export class CardController {
 
   static async removeMemberFromCard(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, memberId } = req.params;
+      const { id, memberId } = req.params as any;
       const userId = (req as any).user?.userId;
       await cardService.removeMemberFromCard(id, memberId, userId);
       return new ServiceResponse(
@@ -189,7 +189,7 @@ export class CardController {
     req: Request
   ): Promise<ServiceResponse<{ actions: any[]; total: number }>> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const { filter, page } = req.query;
       const result = await cardService.getActions(
         cardId,
@@ -214,7 +214,7 @@ export class CardController {
 
   static async addComment(req: Request): Promise<ServiceResponse> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const { text } = req.body;
       const userId = (req as any).user?.userId;
 
@@ -246,7 +246,7 @@ export class CardController {
 
   static async updateComment(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, actionId } = req.params;
+      const { id, actionId } = req.params as any;
       const { text } = req.body;
       const action = await cardService.updateComment(id, actionId, text);
       return new ServiceResponse(
@@ -267,7 +267,7 @@ export class CardController {
 
   static async deleteComment(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, actionId } = req.params;
+      const { id, actionId } = req.params as any;
       await cardService.deleteComment(id, actionId);
       return new ServiceResponse(
         ResponseStatus.Success,
@@ -287,7 +287,7 @@ export class CardController {
 
   static async createAttachment(req: Request): Promise<ServiceResponse> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const userId = (req as any).user?.userId;
       const { name, url, setCover } = req.body;
       const file = req.file;
@@ -326,7 +326,7 @@ export class CardController {
 
   static async deleteAttachment(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, attachmentId } = req.params;
+      const { id, attachmentId } = req.params as any;
       const userId = (req as any).user?.userId;
 
       if (!userId) {
@@ -357,7 +357,7 @@ export class CardController {
 
   static async getAttachments(req: Request): Promise<ServiceResponse<any[]>> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const { fields } = req.query;
       const attachments = await cardService.getAttachments(
         cardId,
@@ -381,7 +381,7 @@ export class CardController {
 
   static async getAttachment(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, attachmentId } = req.params;
+      const { id, attachmentId } = req.params as any;
       const { fields } = req.query;
       const attachment = await cardService.getAttachment(
         id,
@@ -407,7 +407,7 @@ export class CardController {
   // Checklist controllers
   static async getChecklists(req: Request): Promise<ServiceResponse<any[]>> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const { checkItems, filter, field } = req.query;
       const checklists = await cardService.getChecklists(
         cardId,
@@ -433,7 +433,7 @@ export class CardController {
 
   static async createChecklist(req: Request): Promise<ServiceResponse> {
     try {
-      const cardId = req.params.id;
+      const cardId = req.params.id as string;
       const userId = (req as any).user?.userId;
       const { name, position, checklistSourceId } = req.body;
 
@@ -461,7 +461,7 @@ export class CardController {
 
   static async updateChecklist(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, checklistId } = req.params;
+      const { id, checklistId } = req.params as any;
       const { name, position } = req.body;
 
       const updated = await cardService.updateChecklist(id, checklistId, {
@@ -487,7 +487,7 @@ export class CardController {
 
   static async deleteChecklist(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, checklistId } = req.params;
+      const { id, checklistId } = req.params as any;
       const userId = (req as any).user?.userId;
 
       await cardService.deleteChecklist(id, checklistId, userId);
@@ -511,7 +511,7 @@ export class CardController {
   // CheckItem controllers
   static async getCheckItems(req: Request): Promise<ServiceResponse<any[]>> {
     try {
-      const { id, checklistId } = req.params;
+      const { id, checklistId } = req.params as any;
       const { filter, field } = req.query;
 
       const checkItems = await cardService.getCheckItems(
@@ -539,7 +539,7 @@ export class CardController {
 
   static async getCheckItem(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, checklistId, checkItemId } = req.params;
+      const { id, checklistId, checkItemId } = req.params as any;
 
       const checkItem = await cardService.getCheckItem(
         id,
@@ -565,7 +565,7 @@ export class CardController {
 
   static async createCheckItem(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, checklistId } = req.params;
+      const { id, checklistId } = req.params as any;
       const { name, position, isChecked, due, dueReminder } = req.body;
 
       const checkItem = await cardService.createCheckItem(id, checklistId, {
@@ -594,7 +594,7 @@ export class CardController {
 
   static async updateCheckItem(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, checklistId, checkItemId } = req.params;
+      const { id, checklistId, checkItemId } = req.params as any;
       const userId = (req as any).user?.userId;
       const {
         name,
@@ -638,7 +638,7 @@ export class CardController {
 
   static async deleteCheckItem(req: Request): Promise<ServiceResponse> {
     try {
-      const { id, checklistId, checkItemId } = req.params;
+      const { id, checklistId, checkItemId } = req.params as any;
 
       await cardService.deleteCheckItem(id, checklistId, checkItemId);
 

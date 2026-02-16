@@ -35,7 +35,7 @@ export class NotificationController {
 
   static async getNotification(req: Request): Promise<ServiceResponse> {
     try {
-      const notificationId = req.params.id;
+      const notificationId = req.params.id as string;
       const userId = (req as any).user?.userId;
       const query = req.query;
       const notification = await notificationService.getNotification(
@@ -63,7 +63,7 @@ export class NotificationController {
     req: Request
   ): Promise<ServiceResponse> {
     try {
-      const notificationId = req.params.id;
+      const notificationId = req.params.id as string;
       const userId = (req as any).user?.userId;
       const { isRead } = req.body;
       const updatedNotification =

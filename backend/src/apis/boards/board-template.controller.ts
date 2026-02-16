@@ -11,7 +11,7 @@ const templateService = new BoardTemplateService();
 export class BoardTemplateController {
   static async createFromBoard(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as any;
       const { name, description, coverUrl, workspaceId } = req.body || {};
 
       const template = await templateService.createFromBoard(id, {
@@ -60,7 +60,7 @@ export class BoardTemplateController {
 
   static async getOne(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { templateId } = req.params;
+      const { templateId } = req.params as any;
       const template = await templateService.getOne(templateId);
 
       return new ServiceResponse(
@@ -81,7 +81,7 @@ export class BoardTemplateController {
 
   static async apply(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const { templateId } = req.params;
+      const { templateId } = req.params as any;
       const { workspaceId, title, description } = req.body;
 
       if (!workspaceId) {

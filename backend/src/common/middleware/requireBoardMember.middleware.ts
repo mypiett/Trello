@@ -7,7 +7,7 @@ export const requireBoardMember =
   () => async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user.userId;
-      const listId = req.params.id;
+      const listId = req.params.id as string;
       if (!listId) {
         return res.status(400).json({ message: 'Missing ListId' });
       }
