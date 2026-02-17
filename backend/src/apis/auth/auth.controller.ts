@@ -146,7 +146,7 @@ export class AuthController {
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
             return res.redirect(
-                `${frontendUrl}/auth/google/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`
+                `${frontendUrl}/?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`
             );
         } catch (error) {
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

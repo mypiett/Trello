@@ -65,7 +65,7 @@ export class EmailService {
 
   async sendBoardInvitationEmail(options: BoardInvitationEmailOptions) {
     const { to, boardTitle, inviterName, roleName, link, declineLink } = options;
-    const acceptLink = link || `${process.env.FRONTEND_URL || process.env.BACKEND_URL}/boards`;
+    const acceptLink = link || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/boards`;
 
     const formatRoleName = (role: string) => {
       switch (role) {

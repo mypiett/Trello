@@ -730,7 +730,7 @@ export class WorkspaceService {
       });
 
       await this.workspaceMemberRepository.save(newMember);
-
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       // Send notification email
       await this.transporter.sendMail({
         from: `"Task Manager" <${process.env.SMTP_USER}>`,
@@ -740,7 +740,7 @@ export class WorkspaceService {
           <h3>Welcome to ${workspace.title}!</h3>
           <p>You have been added to the workspace with role: <strong>${role.name.replace('workspace_', '')}</strong></p>
           <p>You can now access the workspace and start collaborating.</p>
-          <p><a href="${process.env.FRONTEND_URL}/workspaces/${workspaceId}">Go to Workspace</a></p>
+          <p><a href="${frontendUrl}/workspaces/${workspaceId}">Go to Workspace</a></p>
         `,
       });
 
@@ -771,9 +771,9 @@ export class WorkspaceService {
       JSON.stringify(invitationData),
       { EX: ttl }
     );
-
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     // Send invitation email
-    const invitationLink = `${process.env.FRONTEND_URL}/accept-invitation?token=${invitationToken}`;
+    const invitationLink = `${frontendUrl}/accept-invitation?token=${invitationToken}`;
 
     await this.transporter.sendMail({
       from: `"Task Manager" <${process.env.SMTP_USER}>`,
