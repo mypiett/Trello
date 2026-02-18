@@ -17,6 +17,7 @@ interface Props {
     card: Card;
     onReload?: () => void;
     onClick?: () => void;
+    readonly?: boolean;
 }
 
 interface CardContentProps extends Props {
@@ -27,7 +28,7 @@ interface CardContentProps extends Props {
 }
 
 export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
-    ({ card, onReload, onClick, style, attributes, listeners, isDragging }, ref) => {
+    ({ card, onReload, onClick, style, attributes, listeners, isDragging, readonly }, ref) => {
         const [isHovered, setIsHovered] = useState(false);
         const [localCompleted, setLocalCompleted] = useState(card.isCompleted);
         useEffect(() => {
@@ -36,6 +37,7 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
 
         const handleArchive = async (e?: React.MouseEvent) => {
             e?.stopPropagation();
+            if (readonly) return;
             if (!confirm("Bạn có chắc chắn muốn lưu trữ thẻ này?")) return;
             try {
                 await cardApi.update(card.id, { isArchived: true });
@@ -48,6 +50,7 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
 
         const toggleComplete = async (e: React.MouseEvent) => {
             e.stopPropagation();
+            if (readonly) return;
             const newState = !localCompleted;
 
             // Optimistic Update: Đổi màu ngay lập tức
@@ -70,7 +73,7 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
 
         return (
             <ContextMenu>
-                <ContextMenuTrigger>
+                <ContextMenuTrigger disabled={readonly}>
                     <div
                         ref={ref}
                         style={style}
@@ -85,11 +88,12 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
                         <div className={`absolute top-2 left-2 z-20 transition-opacity duration-200 ${isHovered || localCompleted ? 'opacity-100' : 'opacity-0'}`}>
                             <div
                                 onClick={toggleComplete}
-                                className={`p-1.5 rounded-full cursor-pointer transition-colors backdrop-blur-sm shadow-sm border ${localCompleted
+                                className={`p-1.5 rounded-full transition-colors backdrop-blur-sm shadow-sm border ${readonly ? "cursor-default" : "cursor-pointer"} ${localCompleted
                                     ? "bg-green-100/90 text-green-600 border-green-200 hover:bg-green-200"
                                     : "bg-white/90 text-gray-400 border-gray-200 hover:text-green-600 hover:border-green-400 hover:bg-white"
                                     }`}
-                                title={localCompleted ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
+                                title={readonly ? "Chỉ đọc" : (localCompleted ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành")}
+                                style={{ pointerEvents: readonly ? 'none' : 'auto' }}
                             >
                                 {localCompleted ? (
                                     <CheckCircle2 className="h-4 w-4" />
@@ -100,23 +104,26 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
                         </div>
 
                         {/* Hover Actions: Edit (Top Right) */}
-                        <div className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-                            <div className="p-1.5 bg-white/90 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-800 backdrop-blur-sm shadow-sm border border-gray-200/50">
-                                <Edit3 className="h-3.5 w-3.5" />
+                        {!readonly && (
+                            <div className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className="p-1.5 bg-white/90 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-800 backdrop-blur-sm shadow-sm border border-gray-200/50">
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Archive Button (Bottom Right) */}
-                        {/* ✅ FIX 2: Thêm pointer-events-none để khi ẩn đi thì không bấm nhầm được */}
-                        <div className={`absolute bottom-2 right-2 z-20 transition-all duration-200 ${isHovered && localCompleted ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-                            <div
-                                onClick={handleArchive}
-                                className="p-1.5 bg-white/90 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 backdrop-blur-sm shadow-sm border border-gray-200/50"
-                                title="Lưu trữ thẻ"
-                            >
-                                <Archive className="h-3.5 w-3.5" />
+                        {!readonly && localCompleted && (
+                            <div className={`absolute bottom-2 right-2 z-20 transition-all duration-200 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                                <div
+                                    onClick={handleArchive}
+                                    className="p-1.5 bg-white/90 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 backdrop-blur-sm shadow-sm border border-gray-200/50"
+                                    title="Lưu trữ thẻ"
+                                >
+                                    <Archive className="h-3.5 w-3.5" />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {card.coverUrl && (
                             <img
@@ -136,40 +143,48 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
                     <ContextMenuItem onClick={() => toast.info(`Mở card: ${card.title}`)}>
                         <Edit3 className="mr-2 h-4 w-4" /> Mở thẻ
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => toast.info("Chỉnh sửa nhãn")}>
-                        <Circle className="mr-2 h-4 w-4 text-blue-500" /> Chỉnh sửa nhãn
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => toast.info("Thay đổi thành viên")}>
-                        <UserPlus className="mr-2 h-4 w-4" /> Thay đổi thành viên
-                    </ContextMenuItem>
+                    {!readonly && (
+                        <>
+                            <ContextMenuItem onClick={() => toast.info("Chỉnh sửa nhãn")}>
+                                <Circle className="mr-2 h-4 w-4 text-blue-500" /> Chỉnh sửa nhãn
+                            </ContextMenuItem>
+                            <ContextMenuItem onClick={() => toast.info("Thay đổi thành viên")}>
+                                <UserPlus className="mr-2 h-4 w-4" /> Thay đổi thành viên
+                            </ContextMenuItem>
 
-                    <ContextMenuSeparator />
+                            <ContextMenuSeparator />
 
-                    <ContextMenuItem onClick={() => toast.info("Di chuyển thẻ")}>
-                        <ArrowRight className="mr-2 h-4 w-4" /> Di chuyển...
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => toast.info("Sao chép thẻ")}>
-                        <Copy className="mr-2 h-4 w-4" /> Sao chép...
-                    </ContextMenuItem>
+                            <ContextMenuItem onClick={() => toast.info("Di chuyển thẻ")}>
+                                <ArrowRight className="mr-2 h-4 w-4" /> Di chuyển...
+                            </ContextMenuItem>
+                            <ContextMenuItem onClick={() => toast.info("Sao chép thẻ")}>
+                                <Copy className="mr-2 h-4 w-4" /> Sao chép...
+                            </ContextMenuItem>
+                        </>
+                    )}
                     <ContextMenuItem onClick={copyLink}>
                         <LinkIcon className="mr-2 h-4 w-4" /> Sao chép liên kết
                     </ContextMenuItem>
 
-                    <ContextMenuSeparator />
+                    {!readonly && (
+                        <>
+                            <ContextMenuSeparator />
 
-                    <ContextMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onClick={handleArchive}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" /> Lưu trữ
-                    </ContextMenuItem>
+                            <ContextMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={handleArchive}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" /> Lưu trữ
+                            </ContextMenuItem>
+                        </>
+                    )}
                 </ContextMenuContent>
             </ContextMenu>
         );
     }
 );
 
-export const CardItem = ({ card, onReload, onClick }: Props) => {
+export const CardItem = ({ card, onReload, onClick, readonly }: Props) => {
     const {
         attributes,
         listeners,
@@ -180,6 +195,7 @@ export const CardItem = ({ card, onReload, onClick }: Props) => {
     } = useSortable({
         id: card.id,
         data: { ...card },
+        disabled: readonly // Disable dragging if readonly
     });
 
     const style = {
@@ -198,6 +214,7 @@ export const CardItem = ({ card, onReload, onClick }: Props) => {
             attributes={attributes}
             listeners={listeners}
             isDragging={isDragging}
+            readonly={readonly}
         />
     );
 };

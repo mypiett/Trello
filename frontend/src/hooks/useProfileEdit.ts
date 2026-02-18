@@ -38,7 +38,7 @@ export const useProfileEdit = () => {
                 const uploadData = uploadRes.responseObject || uploadRes.data;
                 if (uploadData && uploadData.avatarUrl) {
                     newAvatarUrl = uploadData.avatarUrl;
-                    console.log("✅ Upload thành công:", newAvatarUrl);
+                    // console.log("✅ Upload thành công:", newAvatarUrl);
                 }
             }
 

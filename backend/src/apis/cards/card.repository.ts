@@ -216,8 +216,6 @@ export class CardRepository {
     },
     userId?: string
   ): Promise<Card> {
-    console.log('Create data:', cardData);
-    console.log('Copy options:', copyOptions);
     const queryRunner =
       this.cardRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
@@ -446,6 +444,7 @@ export class CardRepository {
       coverUrl?: string;
       start?: Date;
       due?: Date;
+      dueReminder?: Date;
       isCompleted?: boolean;
     }
   ): Promise<Card | null> {
@@ -465,6 +464,7 @@ export class CardRepository {
         'coverUrl',
         'start',
         'due',
+        'dueReminder',
         'isCompleted',
         'memberIds',
         'labelIds',
@@ -942,6 +942,14 @@ export class CardRepository {
     if (!checklist) {
       return false;
     }
+
+    // Delete associated checkItems first
+    await this.cardRepository.manager
+      .createQueryBuilder()
+      .delete()
+      .from('checkItems')
+      .where('checklistId = :checklistId', { checklistId })
+      .execute();
 
     const result = await this.cardRepository.manager
       .createQueryBuilder()

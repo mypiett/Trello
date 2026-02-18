@@ -18,6 +18,7 @@ import {
 import { cardApi } from "@/shared/api/card.api";
 import { toast } from "sonner";
 import type { Member } from "@/shared/api/board.api";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
 
 interface Props {
     cardId: string;
@@ -26,6 +27,7 @@ interface Props {
     onUpdate?: () => void;
     trigger?: React.ReactNode; // Custom trigger
     showList?: boolean; // Whether to show the list of avatars
+    canEdit?: boolean;
 }
 
 const getInitials = (name: string) => {
@@ -37,11 +39,9 @@ const getInitials = (name: string) => {
         .toUpperCase();
 };
 
-export const CardMembers = ({ cardId, members = [], boardMembers = [], onUpdate, trigger, showList = true }: Props) => {
+export const CardMembers = ({ cardId, members = [], boardMembers = [], onUpdate, trigger, showList = true, canEdit = true }: Props) => {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-
-    // ... (keep logic)
 
     const isMember = (memberId: string) => {
         return members.some((m) => m.id === memberId);
@@ -88,50 +88,48 @@ export const CardMembers = ({ cardId, members = [], boardMembers = [], onUpdate,
                     </div>
                 ))}
 
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        {trigger || (
-                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">
-                                <Plus className="h-4 w-4 text-gray-600" />
-                            </Button>
-                        )}
-                    </PopoverTrigger>
-                    {/* ... Content ... */}
-                    <PopoverContent className="p-0 w-64" align="start" side="bottom" sideOffset={-5}>
-                        <Command>
-                            <CommandInput placeholder="Tìm thành viên..." />
-                            <CommandList>
-                                <CommandEmpty>Không tìm thấy thành viên.</CommandEmpty>
-                                <CommandGroup heading="Thành viên bảng">
-                                    {boardMembers.map((member) => {
-                                        const selected = isMember(member.id);
-                                        return (
-                                            <CommandItem
-                                                key={member.id}
-                                                onSelect={() => handleToggleMember(member.id)}
-                                                disabled={isLoading}
-                                                className="cursor-pointer"
-                                            >
-                                                <div className="flex items-center gap-2 w-full">
-                                                    <Avatar className="h-6 w-6">
-                                                        <AvatarImage src={member.avatarUrl || ""} />
-                                                        <AvatarFallback className="text-[10px]">{getInitials(member.name)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="truncate flex-1">{member.name}</span>
-                                                    {selected && <Check className="h-4 w-4 text-blue-600" />}
-                                                </div>
-                                            </CommandItem>
-                                        );
-                                    })}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                {canEdit && (
+                    <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                            {trigger || (
+                                <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">
+                                    <Plus className="h-4 w-4 text-gray-600" />
+                                </Button>
+                            )}
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 w-64" align="start" side="bottom" sideOffset={-5}>
+                            <Command>
+                                <CommandInput placeholder="Tìm thành viên..." />
+                                <CommandList>
+                                    <CommandEmpty>Không tìm thấy thành viên.</CommandEmpty>
+                                    <CommandGroup heading="Thành viên bảng">
+                                        {boardMembers.map((member) => {
+                                            const selected = isMember(member.id);
+                                            return (
+                                                <CommandItem
+                                                    key={member.id}
+                                                    onSelect={() => handleToggleMember(member.id)}
+                                                    disabled={isLoading}
+                                                    className="cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        <Avatar className="h-6 w-6">
+                                                            <AvatarImage src={member.avatarUrl || ""} />
+                                                            <AvatarFallback className="text-[10px]">{getInitials(member.name)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="truncate flex-1">{member.name}</span>
+                                                        {selected && <Check className="h-4 w-4 text-blue-600" />}
+                                                    </div>
+                                                </CommandItem>
+                                            );
+                                        })}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                )}
             </div>
         </div>
     );
 };
-
-// Import needed for Tooltip
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";

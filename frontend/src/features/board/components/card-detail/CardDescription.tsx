@@ -10,9 +10,10 @@ interface Props {
     cardId: string;
     initialDescription?: string;
     onUpdate?: () => void;
+    canEdit?: boolean;
 }
 
-export const CardDescription = ({ cardId, initialDescription, onUpdate }: Props) => {
+export const CardDescription = ({ cardId, initialDescription, onUpdate, canEdit = true }: Props) => {
     const [isEditing, setIsEditing] = useState(false);
     const [description, setDescription] = useState(initialDescription || "");
     const formRef = useRef<HTMLDivElement>(null);
@@ -69,7 +70,7 @@ export const CardDescription = ({ cardId, initialDescription, onUpdate }: Props)
                 <h3 className="font-semibold flex items-center gap-2 text-gray-700 text-sm uppercase tracking-wide">
                     <AlignLeft className="w-4 h-4" /> Mô tả
                 </h3>
-                {!isEditing && description && (
+                {!isEditing && description && canEdit && (
                     <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
                         Chỉnh sửa
                     </Button>
@@ -93,8 +94,8 @@ export const CardDescription = ({ cardId, initialDescription, onUpdate }: Props)
                 </div>
             ) : (
                 <div
-                    onClick={() => setIsEditing(true)}
-                    className={`min-h-[60px] p-3 rounded-md cursor-pointer transition-colors ${description
+                    onClick={() => canEdit && setIsEditing(true)}
+                    className={`min-h-[60px] p-3 rounded-md transition-colors ${canEdit ? "cursor-pointer" : "cursor-default"} ${description
                         ? "bg-transparent hover:bg-gray-100"
                         : "bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm font-medium py-4 px-4"
                         }`}

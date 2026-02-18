@@ -19,9 +19,10 @@ interface Props {
     onUpdate: () => void;
     trigger?: React.ReactNode;
     showList?: boolean;
+    canEdit?: boolean;
 }
 
-export function CardLabels({ cardId, labels, boardLabels, onUpdate, trigger, showList = true }: Props) {
+export function CardLabels({ cardId, labels, boardLabels, onUpdate, trigger, showList = true, canEdit = true }: Props) {
     const [isOpen, setIsOpen] = useState(false);
 
     // ... (logic)
@@ -58,42 +59,44 @@ export function CardLabels({ cardId, labels, boardLabels, onUpdate, trigger, sho
                     </div>
                 ))}
 
-                <Popover open={isOpen} onOpenChange={setIsOpen}>
-                    <PopoverTrigger asChild>
-                        {trigger || (
-                            <Button variant="secondary" size="sm" className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 p-0 flex items-center justify-center">
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-3" align="start" side="bottom" sideOffset={-5}>
-                        <div className="space-y-3">
-                            <h4 className="font-semibold text-sm text-center border-b pb-2 mb-2">Nhãn</h4>
-                            <div className="space-y-1">
-                                {boardLabels.map((label) => {
-                                    const isActive = isLabelActive(label.id);
-                                    return (
-                                        <div
-                                            key={label.id}
-                                            className="flex items-center gap-2 cursor-pointer group"
-                                            onClick={() => handleToggleLabel(label)}
-                                        >
+                {canEdit && (
+                    <Popover open={isOpen} onOpenChange={setIsOpen}>
+                        <PopoverTrigger asChild>
+                            {trigger || (
+                                <Button variant="secondary" size="sm" className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 p-0 flex items-center justify-center">
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3" align="start" side="bottom" sideOffset={-5}>
+                            <div className="space-y-3">
+                                <h4 className="font-semibold text-sm text-center border-b pb-2 mb-2">Nhãn</h4>
+                                <div className="space-y-1">
+                                    {boardLabels.map((label) => {
+                                        const isActive = isLabelActive(label.id);
+                                        return (
                                             <div
-                                                className="flex-1 h-8 rounded px-3 flex items-center text-sm font-medium text-white hover:opacity-90 transition-opacity"
-                                                style={{ backgroundColor: label.color }}
+                                                key={label.id}
+                                                className="flex items-center gap-2 cursor-pointer group"
+                                                onClick={() => handleToggleLabel(label)}
                                             >
-                                                {label.name}
+                                                <div
+                                                    className="flex-1 h-8 rounded px-3 flex items-center text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                                                    style={{ backgroundColor: label.color }}
+                                                >
+                                                    {label.name}
+                                                </div>
+                                                {isActive && (
+                                                    <Check className="h-4 w-4 text-blue-600" />
+                                                )}
                                             </div>
-                                            {isActive && (
-                                                <Check className="h-4 w-4 text-blue-600" />
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                        </PopoverContent>
+                    </Popover>
+                )}
             </div>
         </div>
     );

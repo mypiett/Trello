@@ -5,7 +5,6 @@ const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   // Support token via query param for SSE (EventSource doesn't support headers)
   const queryToken = req.query.token as string;
-  console.log('🚀 ~ authenticateJWT ~ authHeader:', authHeader);
 
   let token: string | undefined;
 

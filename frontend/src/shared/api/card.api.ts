@@ -57,7 +57,7 @@ export const cardApi = {
 
     // Checklists
     getChecklists: (cardId: string) => {
-        return apiFactory.get(`/cards/${cardId}/checklists`);
+        return apiFactory.get(`/cards/${cardId}/checklists?checkItems=true`);
     },
     createChecklist: (cardId: string, name: string, position: number) => {
         return apiFactory.post(`/cards/${cardId}/checklists`, { name, position });

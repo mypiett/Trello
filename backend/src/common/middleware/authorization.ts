@@ -67,7 +67,6 @@ export function authorize(options: AuthorizationOptions) {
           });
       }
 
-      console.log('Authorization access result:', accessResult);
       if (!accessResult.allowed) {
         if (
           options.allowPublic &&

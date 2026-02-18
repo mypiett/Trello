@@ -47,7 +47,6 @@ export default function DashboardPage() {
     try {
       setLoading(true)
       const response: any = await workspaceApi.getMyWorkspaces()
-      console.log("🔥 API Response:", response)
       const data = response.responseObject || response.data || []
       setWorkspaces(data)
     } catch (error) {

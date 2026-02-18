@@ -9,10 +9,11 @@ import {
 } from "@/shared/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
-import { UserX, Loader2 } from "lucide-react";
+import { UserX, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { boardApi, type Member } from "@/shared/api/board.api";
 import { tokenStorage } from "@/shared/utils/tokenStorage";
+import { InviteMemberDialog } from "./InviteMemberDialog";
 
 interface ManageMembersDialogProps {
     boardId: string;
@@ -52,6 +53,11 @@ export function ManageMembersDialog({ boardId, members, onUpdate, children }: Ma
 
     const isSelf = (userId: string) => currentUser?.id === userId;
 
+    // Check if current user is Admin or Owner
+    const currentUserMember = members.find(m => m.id === currentUser?.id);
+    const roleName = currentUserMember?.roleName?.toLowerCase() || currentUserMember?.role?.name?.toLowerCase() || "";
+    const canManageMembers = ["board_owner", "board_admin", "owner", "admin"].includes(roleName);
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -75,12 +81,23 @@ export function ManageMembersDialog({ boardId, members, onUpdate, children }: Ma
                                     </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="text-sm font-medium leading-none">{member.name}</p>
+                                    <p className="text-sm font-medium leading-none flex items-center gap-2">
+                                        {member.name}
+                                        {/* Helper to check role safely */}
+                                        {(() => {
+                                            const r = member.roleName?.toLowerCase() || member.role?.name?.toLowerCase() || "";
+                                            if (r.includes('owner')) return <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded font-normal">Owner</span>;
+                                            if (r.includes('admin')) return <span className="text-[10px] bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-normal">Admin</span>;
+                                            if (r.includes('observer')) return <span className="text-[10px] bg-green-100 text-green-800 px-1 py-0.5 rounded font-normal">Observer</span>;
+                                            if (r.includes('member')) return <span className="text-[10px] bg-gray-100 text-gray-800 px-1 py-0.5 rounded font-normal">Member</span>;
+                                            return <span className="text-[10px] bg-gray-100 text-gray-800 px-1 py-0.5 rounded font-normal capitalize">{member.roleName || "Member"}</span>;
+                                        })()}
+                                    </p>
                                     <p className="text-xs text-muted-foreground mt-1">{member.email}</p>
                                 </div>
                             </div>
 
-                            {!isSelf(member.id) && (
+                            {!isSelf(member.id) && canManageMembers && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -105,6 +122,14 @@ export function ManageMembersDialog({ boardId, members, onUpdate, children }: Ma
                     {members.length === 0 && (
                         <p className="text-center text-gray-500 text-sm py-4">Chưa có thành viên nào.</p>
                     )}
+                </div>
+
+                <div className="pt-4 mt-2 border-t flex justify-center">
+                    <InviteMemberDialog boardId={boardId} onSuccess={onUpdate}>
+                        <Button variant="outline" className="w-full gap-2 border-dashed">
+                            <Plus className="h-4 w-4" /> Thêm thành viên
+                        </Button>
+                    </InviteMemberDialog>
                 </div>
             </DialogContent>
         </Dialog>

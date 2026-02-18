@@ -31,8 +31,12 @@ interface Action {
     };
 }
 
+import type { BoardDetail } from "@/shared/api/board.api";
+
 interface Props {
     cardId: string;
+    board?: BoardDetail;
+    canEdit?: boolean;
 }
 
 const getInitials = (name: string) => {
@@ -45,7 +49,7 @@ const getInitials = (name: string) => {
         .toUpperCase();
 };
 
-export const CardActivity = ({ cardId }: Props) => {
+export const CardActivity = ({ cardId, board, canEdit = true }: Props) => {
     const [actions, setActions] = useState<Action[]>([]);
     const [commentText, setCommentText] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -53,6 +57,33 @@ export const CardActivity = ({ cardId }: Props) => {
     const [editCommentText, setEditCommentText] = useState("");
     const [isFocused, setIsFocused] = useState(false);
     const currentUser = tokenStorage.getUser();
+
+    // Check permissions
+    const canComment = (() => {
+        if (!canEdit) return false; // Force read-only for observers
+        if (!board || !currentUser) return false;
+        const policy = board.commentPolicy || 'members';
+
+        // 1. Anyone
+        if (policy === 'anyone') return true;
+
+        // Find current member
+        const currentMember = board.members?.find(m => m.id === currentUser.id);
+        const isMember = !!currentMember;
+
+        // 2. Disabled
+        if (policy === 'disabled') {
+            return false;
+        }
+
+        // 3. Members
+        if (policy === 'members') return isMember;
+
+        // 4. Workspace
+        if (policy === 'workspace') return isMember;
+
+        return false;
+    })();
 
     const fetchActions = async () => {
         try {
@@ -79,8 +110,8 @@ export const CardActivity = ({ cardId }: Props) => {
             setCommentText("");
             setIsFocused(false);
             fetchActions();
-        } catch (error) {
-            toast.error("Lỗi khi gửi bình luận");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Lỗi khi gửi bình luận");
         } finally {
             setIsSending(false);
         }
@@ -132,39 +163,44 @@ export const CardActivity = ({ cardId }: Props) => {
 
 
                 {/* Comment Input */}
-                {/* Comment Input */}
-                <div className="flex gap-3">
-                    <Avatar className="h-8 w-8 mt-1">
-                        <AvatarImage src={currentUser?.avatarUrl || ""} />
-                        <AvatarFallback>{getInitials(currentUser?.name || "ME")}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-2">
-                        {!isFocused && !commentText ? (
-                            <div
-                                className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 cursor-text bg-white hover:bg-gray-50 shadow-sm transition-colors"
-                                onClick={() => setIsFocused(true)}
-                            >
-                                Viết bình luận...
-                            </div>
-                        ) : (
-                            <div className="space-y-2 animate-in fade-in zoom-in duration-200">
-                                <RichTextEditor
-                                    placeholder="Viết bình luận..."
-                                    value={commentText}
-                                    onChange={setCommentText}
-                                />
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" onClick={handleSendComment} disabled={isSending}>
-                                        {isSending ? "Đang gửi..." : "Lưu"}
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => { setIsFocused(false); setCommentText(""); }}>
-                                        Hủy
-                                    </Button>
+                {canComment ? (
+                    <div className="flex gap-3">
+                        <Avatar className="h-8 w-8 mt-1">
+                            <AvatarImage src={currentUser?.avatarUrl || ""} />
+                            <AvatarFallback>{getInitials(currentUser?.name || "ME")}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 space-y-2">
+                            {!isFocused && !commentText ? (
+                                <div
+                                    className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 cursor-text bg-white hover:bg-gray-50 shadow-sm transition-colors"
+                                    onClick={() => setIsFocused(true)}
+                                >
+                                    Viết bình luận...
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="space-y-2 animate-in fade-in zoom-in duration-200">
+                                    <RichTextEditor
+                                        placeholder="Viết bình luận..."
+                                        value={commentText}
+                                        onChange={setCommentText}
+                                    />
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" onClick={handleSendComment} disabled={isSending}>
+                                            {isSending ? "Đang gửi..." : "Lưu"}
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => { setIsFocused(false); setCommentText(""); }}>
+                                            Hủy
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="italic text-gray-500 text-sm p-3 border rounded bg-gray-50 text-center">
+                        Bình luận đã bị tắt trên bảng này.
+                    </div>
+                )}
 
                 {/* Comments List */}
                 <div className="space-y-4 mt-4">
@@ -264,6 +300,6 @@ export const CardActivity = ({ cardId }: Props) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

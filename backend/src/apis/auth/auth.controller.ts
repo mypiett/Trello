@@ -186,7 +186,6 @@ export class AuthController {
 
     static async forgetPassword(req: Request): Promise<ServiceResponse<any>> {
         const { email } = req.body;
-        console.log('🔥 Đang yêu cầu reset pass cho:', email);
         const lastSentRequestForgotPassword = await redisClient.get(
             `lastSentRequestForgotPassword:${email}`
         );
@@ -199,9 +198,7 @@ export class AuthController {
             );
         }
         try {
-            console.log('🚀 Bắt đầu gửi mail...');
             await authService.forgetPassword(email);
-            console.log('✅ Gửi mail thành công!  ');
             await redisClient.set(
                 `lastSentRequestForgotPassword:${email}`,
                 Date.now().toString(),

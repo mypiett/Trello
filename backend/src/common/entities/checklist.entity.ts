@@ -23,7 +23,7 @@ export class Checklist {
 
   @Column({ type: 'uuid' })
   cardId: string;
-  @ManyToOne(() => Card, (card) => card.checklists)
+  @ManyToOne(() => Card, (card) => card.checklists, { onDelete: 'CASCADE' })
   public card: Card;
 
   @OneToMany(() => CheckItem, (checkItem) => checkItem.checklist)

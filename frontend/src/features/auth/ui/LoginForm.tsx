@@ -52,7 +52,7 @@ export const LoginForm = ({ onSuccess }: OAuthFormProps) => {
     try {
       setLoginError(null)
       const result = await login(data.email, data.password)
-      console.log("Login result:", result)
+      // console.log("Login result:", result)
       const { user, accessToken, refreshToken } = result
       tokenStorage.setUser(user)
       tokenStorage.setAccessToken(accessToken)

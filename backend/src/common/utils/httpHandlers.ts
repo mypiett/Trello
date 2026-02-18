@@ -66,7 +66,6 @@ export const validateRequest =
 export const validateHandle =
   (schema: ZodObject<ZodRawShape>) =>
   (req: Request, res: Response, next: NextFunction) => {
-    console.log('🔥 [DEBUG MIDDLEWARE] Đang check body:', req.body);
 
     const result = schema.safeParse(req.body);
 
@@ -88,8 +87,6 @@ export const validateHandle =
           )
         );
     }
-
-    console.log('✅ [DEBUG MIDDLEWARE] Validate OK -> Chuyển tiếp Controller');
 
     req.body = result.data;
     next();

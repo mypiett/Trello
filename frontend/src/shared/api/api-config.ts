@@ -42,11 +42,11 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
 
-    console.log("🚀 API Request:", {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      hasToken: !!token,
-    })
+    // console.log("🚀 API Request:", {
+    //   method: config.method?.toUpperCase(),
+    //   url: config.url,
+    //   hasToken: !!token,
+    // })
 
     return config
   },
@@ -58,10 +58,10 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
-    console.log("✅ API Response:", {
-      status: response.status,
-      url: response.config.url,
-    })
+    // console.log("✅ API Response:", {
+    //   status: response.status,
+    //   url: response.config.url,
+    // })
     return response
   },
   async (error: AxiosError) => {
@@ -111,7 +111,7 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        console.log("🔁 Attempting to refresh token...")
+        // console.log("🔁 Attempting to refresh token...");
 
         const response = await axios.post(
           `${apiConfig.baseURL}auth/refresh-token`,
@@ -125,7 +125,7 @@ apiClient.interceptors.response.use(
         if (newRefreshToken) {
           tokenStorage.setRefreshToken(newRefreshToken)
         }
-        console.log("Token refreshed successfully")
+        // console.log("Token refreshed successfully");
         processQueue(null, accessToken)
 
         if (originalRequest.headers) {

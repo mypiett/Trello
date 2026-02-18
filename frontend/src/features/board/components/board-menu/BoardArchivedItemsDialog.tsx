@@ -19,9 +19,10 @@ interface Props {
     boardId: string;
     onUpdate?: () => void;
     children?: React.ReactNode;
+    canEdit?: boolean;
 }
 
-export function BoardArchivedItemsDialog({ boardId, onUpdate, children }: Props) {
+export function BoardArchivedItemsDialog({ boardId, onUpdate, children, canEdit = true }: Props) {
     const [archivedLists, setArchivedLists] = useState<any[]>([]);
     const [archivedCards, setArchivedCards] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -126,9 +127,11 @@ export function BoardArchivedItemsDialog({ boardId, onUpdate, children }: Props)
                                                     </p>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <Button variant="outline" size="sm" className="h-8" onClick={() => handleRestoreCard(card.id)}>
-                                                        <RotateCcw className="w-3 h-3 mr-1" /> Khôi phục
-                                                    </Button>
+                                                    {canEdit && (
+                                                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleRestoreCard(card.id)}>
+                                                            <RotateCcw className="w-3 h-3 mr-1" /> Khôi phục
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))
@@ -149,9 +152,11 @@ export function BoardArchivedItemsDialog({ boardId, onUpdate, children }: Props)
                                             <div key={list.id} className="flex items-center justify-between p-3 bg-white rounded border shadow-sm hover:shadow-md transition">
                                                 <p className="font-medium text-sm text-gray-900">{list.title}</p>
                                                 <div className="flex gap-2">
-                                                    <Button variant="outline" size="sm" className="h-8" onClick={() => handleRestoreList(list.id)}>
-                                                        <RotateCcw className="w-3 h-3 mr-1" /> Gửi lại vào bảng
-                                                    </Button>
+                                                    {canEdit && (
+                                                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleRestoreList(list.id)}>
+                                                            <RotateCcw className="w-3 h-3 mr-1" /> Gửi lại vào bảng
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))

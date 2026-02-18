@@ -29,7 +29,7 @@ function RedirectHandler() {
 
 export const RouterProvider = ({ children }: { children: ReactNode }) => {
   const basename = normalizeBaseUrl(import.meta.env.BASE_URL);
-  console.log('🚀 RouterProvider rendered with basename:', basename);
+  // console.log('🚀 RouterProvider rendered with basename:', basename);
 
   return (
     <BrowserRouter basename={basename}>

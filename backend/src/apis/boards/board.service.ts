@@ -154,6 +154,10 @@ export class BoardService {
             name: true,
             avatarUrl: true,
           },
+          role: {
+            id: true,
+            name: true,
+          },
         },
         labels: {
           id: true,
@@ -213,7 +217,6 @@ export class BoardService {
           : [],
       })),
     };
-
     return transformedBoard;
   }
 
@@ -221,9 +224,7 @@ export class BoardService {
     const board = await this.boardRepository.findOne({
       where: { id },
     });
-
     if (!board) throw new Error('Board not found');
-
     Object.assign(board, data);
 
     return await this.boardRepository.save(board);
@@ -302,8 +303,8 @@ export class BoardService {
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const acceptLink = `${frontendUrl}/invite/accept?boardId=${board.id}`;
-    const declineLink = `${frontendUrl}/invite/decline?boardId=${board.id}`;
+    const acceptLink = `${frontendUrl} /invite/accept ? boardId = ${board.id} `;
+    const declineLink = `${frontendUrl} /invite/decline ? boardId = ${board.id} `;
 
     await this.emailService.sendBoardInvitationEmail({
       to: user.email,

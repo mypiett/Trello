@@ -14,6 +14,8 @@ export interface Card {
     labels?: any[];
     attachments?: any[];
     due?: string;
+    start?: string; // Add start date
+    dueReminder?: number; // Add due reminder (minutes)
     listId?: string; // Add listId for archived cards context
     listTitle?: string; // Add listTitle for context
 }
@@ -31,6 +33,11 @@ export interface Member {
     email: string;
     avatarUrl: string | null;
     roleId: string;
+    roleName?: string;
+    role?: {
+        id: string;
+        name: string;
+    };
 }
 export interface BoardDetail {
     id: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CheckSquare, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -23,9 +23,10 @@ interface Checklist {
 
 interface Props {
     cardId: string;
+    canEdit?: boolean;
 }
 
-export const CardChecklist = ({ cardId }: Props) => {
+export const CardChecklist = ({ cardId, canEdit = true }: Props) => {
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [newChecklistName, setNewChecklistName] = useState("Việc cần làm");
@@ -33,6 +34,7 @@ export const CardChecklist = ({ cardId }: Props) => {
     // Helper state for adding items to specific checklist
     const [addingItemTo, setAddingItemTo] = useState<string | null>(null);
     const [newItemName, setNewItemName] = useState("");
+    const [hiddenCompleted, setHiddenCompleted] = useState<Record<string, boolean>>({});
 
     const fetchChecklists = async () => {
         try {
@@ -63,27 +65,40 @@ export const CardChecklist = ({ cardId }: Props) => {
     };
 
     const handleDeleteChecklist = async (checklistId: string) => {
-        if (!confirm("Bạn có chắc chắn muốn xóa danh sách này?")) return;
+        if (!confirm("Bạn có chắc chắn muốn xóa danh sách công việc này ? Hành động này sẽ không thể hoàn tác !")) return;
+
+        // Optimistic update
+        const previousChecklists = [...checklists];
+        setChecklists(prev => prev.filter(c => c.id !== checklistId));
+
         try {
             await cardApi.deleteChecklist(cardId, checklistId);
             toast.success("Đã xóa danh sách");
-            setChecklists(prev => prev.filter(c => c.id !== checklistId));
-        } catch (error) {
-            toast.error("Lỗi khi xóa danh sách");
+        } catch (error: any) {
+            console.error("Delete checklist error", error);
+            toast.error("Lỗi xóa danh sách: " + (error?.message || "Không xác định"));
+            setChecklists(previousChecklists); // Revert
         }
     };
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
     const handleAddItem = async (checklistId: string) => {
         if (!newItemName.trim()) return;
+        // console.log("Adding item:", { cardId, checklistId, newItemName }); 
         try {
             const checklist = checklists.find(c => c.id === checklistId);
             const position = checklist?.checkItems?.length || 0;
+            // console.log("Payload:", { content: newItemName, position });
             await cardApi.createCheckItem(cardId, checklistId, newItemName, position);
             toast.success("Đã thêm mục");
-            setAddingItemTo(null);
+            // setAddingItemTo(null); // Keep open for multiple entry
             setNewItemName("");
             fetchChecklists();
+            // Focus back to input
+            setTimeout(() => inputRef.current?.focus(), 0);
         } catch (error) {
+            console.error("Add item error:", error);
             toast.error("Lỗi khi thêm mục");
         }
     };
@@ -92,11 +107,19 @@ export const CardChecklist = ({ cardId }: Props) => {
         // Optimistic update
         setChecklists(prev => prev.map(cl => {
             if (cl.id !== checklistId) return cl;
+            const updatedItems = cl.checkItems.map(item =>
+                item.id === itemId ? { ...item, isChecked } : item
+            );
+
+            // Auto hide if all completed
+            const allCompleted = updatedItems.length > 0 && updatedItems.every(i => i.isChecked);
+            if (allCompleted && isChecked) {
+                setHiddenCompleted(prev => ({ ...prev, [checklistId]: true }));
+            }
+
             return {
                 ...cl,
-                checkItems: cl.checkItems.map(item =>
-                    item.id === itemId ? { ...item, isChecked } : item
-                )
+                checkItems: updatedItems
             };
         }));
 
@@ -109,17 +132,22 @@ export const CardChecklist = ({ cardId }: Props) => {
     };
 
     const handleDeleteItem = async (checklistId: string, itemId: string) => {
+        // Optimistic update
+        const previousChecklists = [...checklists];
+        setChecklists(prev => prev.map(cl => {
+            if (cl.id !== checklistId) return cl;
+            return {
+                ...cl,
+                checkItems: cl.checkItems.filter(item => item.id !== itemId)
+            };
+        }));
+
         try {
             await cardApi.deleteCheckItem(cardId, checklistId, itemId);
-            setChecklists(prev => prev.map(cl => {
-                if (cl.id !== checklistId) return cl;
-                return {
-                    ...cl,
-                    checkItems: cl.checkItems.filter(item => item.id !== itemId)
-                };
-            }));
         } catch (error) {
+            console.error("Delete item error", error);
             toast.error("Lỗi khi xóa mục");
+            setChecklists(previousChecklists); // Revert
         }
     };
 
@@ -131,84 +159,121 @@ export const CardChecklist = ({ cardId }: Props) => {
 
     return (
         <div className="space-y-6">
-            {checklists.map((checklist) => (
-                <div key={checklist.id} className="space-y-3">
-                    <div className="flex items-center justify-between group">
-                        <h3 className="font-semibold flex items-center gap-2 text-gray-700 text-sm uppercase tracking-wide">
-                            <CheckSquare className="w-4 h-4" /> {checklist.name}
-                        </h3>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleDeleteChecklist(checklist.id)}
-                        >
-                            <Trash2 className="w-4 h-4" /> Xóa
-                        </Button>
-                    </div>
+            {checklists.map((checklist) => {
+                const totalItems = checklist.checkItems?.length || 0;
+                const completedItems = checklist.checkItems?.filter(i => i.isChecked).length || 0;
+                const progress = totalItems === 0 ? 0 : Math.round((completedItems / totalItems) * 100);
+                const isHidden = hiddenCompleted[checklist.id];
+                const visibleItems = checklist.checkItems?.filter(item => !isHidden || !item.isChecked) || [];
 
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 w-8">{calculateProgress(checklist.checkItems)}%</span>
-                        <Progress value={calculateProgress(checklist.checkItems)} className="h-2" />
-                    </div>
-
-                    <div className="space-y-2">
-                        {checklist.checkItems?.map((item) => (
-                            <div key={item.id} className="flex items-start gap-3 group/item">
-                                <Checkbox
-                                    checked={item.isChecked}
-                                    onCheckedChange={(checked) => handleToggleItem(checklist.id, item.id, checked as boolean)}
-                                    className="mt-1"
-                                />
-                                <span className={`text-sm flex-1 break-words ${item.isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                                    {item.name}
-                                </span>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-gray-400 hover:text-red-500 opacity-0 group-hover/item:opacity-100"
-                                    onClick={() => handleDeleteItem(checklist.id, item.id)}
-                                >
-                                    <X className="w-3 h-3" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-
-                    {addingItemTo === checklist.id ? (
-                        <div className="space-y-2 pl-7">
-                            <Input
-                                value={newItemName}
-                                onChange={(e) => setNewItemName(e.target.value)}
-                                placeholder="Thêm một mục..."
-                                autoFocus
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        handleAddItem(checklist.id);
-                                    }
-                                }}
-                            />
+                return (
+                    <div key={checklist.id} className="space-y-3">
+                        <div className="flex items-center justify-between group">
+                            <h3 className="font-semibold flex items-center gap-2 text-gray-700 text-sm tracking-wide">
+                                <CheckSquare className="w-4 h-4" /> {checklist.name}
+                            </h3>
                             <div className="flex items-center gap-2">
-                                <Button size="sm" onClick={() => handleAddItem(checklist.id)}>Thêm</Button>
-                                <Button variant="ghost" size="sm" onClick={() => setAddingItemTo(null)}>Hủy</Button>
+                                {totalItems > 0 && completedItems > 0 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setHiddenCompleted(prev => ({ ...prev, [checklist.id]: !isHidden }))}
+                                        className="h-7 px-2 text-xs font-medium text-gray-500 hover:bg-gray-200"
+                                    >
+                                        {isHidden
+                                            ? `Hiển thị các mục đã chọn (${completedItems})`
+                                            : `Ẩn các mục đã chọn (${completedItems})`}
+                                    </Button>
+                                )}
+                                {canEdit && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                        onClick={() => handleDeleteChecklist(checklist.id)}
+                                    >
+                                        <Trash2 className="w-4 h-4" /> Xóa
+                                    </Button>
+                                )}
                             </div>
                         </div>
-                    ) : (
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            className="ml-0 mt-2"
-                            onClick={() => {
-                                setAddingItemTo(checklist.id);
-                                setNewItemName("");
-                            }}
-                        >
-                            <Plus className="w-4 h-4 mr-1" /> Thêm một mục
-                        </Button>
-                    )}
-                </div>
-            ))}
+
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500 w-8">{progress}%</span>
+                                <Progress value={progress} className="h-2 flex-1" />
+                            </div>
+                            {progress === 100 && isHidden && (
+                                <p className="text-sm text-green-600 italic ml-11">
+                                    Mọi thứ trong danh sách công việc này đều đã hoàn tất!
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            {visibleItems.map((item) => (
+                                <div key={item.id} className="flex items-start gap-3 group/item">
+                                    <Checkbox
+                                        checked={item.isChecked}
+                                        onCheckedChange={(checked) => handleToggleItem(checklist.id, item.id, checked as boolean)}
+                                        className="mt-1"
+                                        disabled={!canEdit}
+                                    />
+                                    <span className={`text-sm flex-1 break-words transition-colors ${item.isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                        {item.name}
+                                    </span>
+                                    {canEdit && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-gray-400 hover:text-red-500"
+                                            onClick={() => handleDeleteItem(checklist.id, item.id)}
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {addingItemTo === checklist.id ? (
+                            <div className="space-y-2 pl-7">
+                                <Input
+                                    ref={inputRef}
+                                    value={newItemName}
+                                    onChange={(e) => setNewItemName(e.target.value)}
+                                    placeholder="Thêm một mục..."
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            handleAddItem(checklist.id);
+                                        }
+                                    }}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" onClick={() => handleAddItem(checklist.id)}>Thêm</Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setAddingItemTo(null)}>Hủy</Button>
+                                </div>
+                            </div>
+                        ) : (
+                            canEdit && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="ml-0 mt-2"
+                                    onClick={() => {
+                                        setAddingItemTo(checklist.id);
+                                        setNewItemName("");
+                                    }}
+                                >
+                                    <Plus className="w-4 h-4 mr-1" /> Thêm một mục
+                                </Button>
+                            )
+                        )}
+                    </div>
+                );
+            })}
 
             {/* Create new checklist button/form */}
             {isCreating ? (
@@ -226,13 +291,15 @@ export const CardChecklist = ({ cardId }: Props) => {
                     </div>
                 </div>
             ) : (
-                <Button
-                    variant="outline"
-                    className="w-full justify-start text-gray-600"
-                    onClick={() => setIsCreating(true)}
-                >
-                    <CheckSquare className="w-4 h-4 mr-2" /> Thêm danh sách công việc
-                </Button>
+                canEdit && (
+                    <Button
+                        variant="outline"
+                        className="w-full justify-start text-gray-600"
+                        onClick={() => setIsCreating(true)}
+                    >
+                        <CheckSquare className="w-4 h-4 mr-2" /> Thêm danh sách công việc
+                    </Button>
+                )
             )}
         </div>
     );

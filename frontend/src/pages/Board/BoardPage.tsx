@@ -133,11 +133,16 @@ const BoardPage = () => {
 
     // Permission Calculation
     const currentMember = board?.members.find(m => m.id === currentUser?.id);
-    const roleName = (currentMember as any)?.roleName?.toLowerCase() || "";
+    const roleName = currentMember?.roleName?.toLowerCase() || currentMember?.role?.name?.toLowerCase() || "";
     const isOwnerOrAdmin = ["board_owner", "board_admin", "owner", "admin"].includes(roleName);
-    const canEdit = isOwnerOrAdmin;
-    // Allow managing members if admin or policy allows all members
-    const canManageMembers = isOwnerOrAdmin || (board?.memberManagePolicy === 'all_members');
+    const isObserver = roleName.includes("observer");
+
+    // Regular members can edit. Only Observers are read-only.
+    // isOwnerOrAdmin is used for administrative tasks (Settings, Delete Board).
+    const canEdit = !isObserver;
+
+    // Allow managing members if admin or policy allows all members (but NEVER Observers)
+    const canManageMembers = !isObserver && (isOwnerOrAdmin || (board?.memberManagePolicy === 'all_members'));
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
@@ -162,7 +167,7 @@ const BoardPage = () => {
             //     // Ensure members is array
             // }
 
-            console.log("🔥 Board Data:", boardData);
+            // console.log("🔥 Board Data:", boardData);
             setBoard(boardData);
         } catch (error) {
             console.error("Lỗi tải board:", error);
@@ -476,7 +481,7 @@ const BoardPage = () => {
                 nextColumnId,
                 nextIndex: nextIndex < 0 ? 0 : nextIndex,
             });
-            console.log(`Moved Card: ${prevColumnId} -> ${nextColumnId} at index ${nextIndex}`);
+            // console.log(`Moved Card: ${prevColumnId} -> ${nextColumnId} at index ${nextIndex}`);
 
         } catch (error) {
             console.error("Moved card failed:", error);
@@ -668,9 +673,11 @@ const BoardPage = () => {
                             {/* ... dropdown items ... */}
                             <DropdownMenuLabel>Menu bảng</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <BackgroundPicker boardId={boardId!} currentCover={board.coverUrl} onUpdate={handleBackgroundUpdate}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <ImageIcon className="mr-2 h-4 w-4" /> Đổi hình nền </DropdownMenuItem>
-                            </BackgroundPicker>
+                            {canEdit && (
+                                <BackgroundPicker boardId={boardId!} currentCover={board.coverUrl} onUpdate={handleBackgroundUpdate}>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <ImageIcon className="mr-2 h-4 w-4" /> Đổi hình nền </DropdownMenuItem>
+                                </BackgroundPicker>
+                            )}
                             {canManageMembers && (
                                 <ManageMembersDialog boardId={boardId!} members={board.members} onUpdate={fetchBoardData}>
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Users className="mr-2 h-4 w-4" /> Quản lý thành viên </DropdownMenuItem>
@@ -683,7 +690,7 @@ const BoardPage = () => {
                             {isOwnerOrAdmin && (
                                 <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={handleDeleteBoard}> <Trash2 className="mr-2 h-4 w-4" /> Xóa bảng vĩnh viễn </DropdownMenuItem>
                             )}
-                            {!isOwnerOrAdmin && (<DropdownMenuItem disabled> <span className="text-xs text-gray-400 italic">Bạn chỉ có quyền xem</span> </DropdownMenuItem>)}
+                            {!canEdit && (<DropdownMenuItem disabled> <span className="text-xs text-gray-400 italic">Bạn chỉ có quyền xem</span> </DropdownMenuItem>)}
                             <DropdownMenuSeparator />
                             <DropdownMenuLabel>Cài đặt</DropdownMenuLabel>
                             {isOwnerOrAdmin && (
@@ -699,13 +706,13 @@ const BoardPage = () => {
                             <DropdownMenuSeparator />
 
                             <DropdownMenuLabel>Tiện ích</DropdownMenuLabel>
-                            <BoardInfoDialog boardId={boardId!} currentDescription={board.description} onUpdate={fetchBoardData}>
+                            <BoardInfoDialog boardId={boardId!} currentDescription={board.description} onUpdate={fetchBoardData} canEdit={canEdit}>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Info className="mr-2 h-4 w-4" /> Giới thiệu bảng </DropdownMenuItem>
                             </BoardInfoDialog>
                             <BoardActivitySidebar boardId={boardId!}>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Activity className="mr-2 h-4 w-4" /> Hoạt động </DropdownMenuItem>
                             </BoardActivitySidebar>
-                            <BoardArchivedItemsDialog boardId={boardId!} onUpdate={fetchBoardData}>
+                            <BoardArchivedItemsDialog boardId={boardId!} onUpdate={fetchBoardData} canEdit={canEdit}>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}> <Archive className="mr-2 h-4 w-4" /> Mục đã lưu trữ </DropdownMenuItem>
                             </BoardArchivedItemsDialog>
                         </DropdownMenuContent>
@@ -762,6 +769,7 @@ const BoardPage = () => {
                         onUpdate={fetchBoardData}
                         members={board?.members || []}
                         labels={board?.labels || []}
+                        board={board || undefined}
                     />
                 )
             }

@@ -55,7 +55,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
       }
 
-      console.log("User final:", currentUser);
+      // console.log("User final:", currentUser);
       setUser(currentUser);
       await fetchWorkspaces();
     };

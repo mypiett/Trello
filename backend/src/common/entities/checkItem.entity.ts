@@ -27,6 +27,8 @@ export class CheckItem {
 
   @Column({ type: 'uuid' })
   checklistId: string;
-  @ManyToOne(() => Checklist, (checklist) => checklist.checkItems)
+  @ManyToOne(() => Checklist, (checklist) => checklist.checkItems, {
+    onDelete: 'CASCADE',
+  })
   public checklist: Checklist;
 }

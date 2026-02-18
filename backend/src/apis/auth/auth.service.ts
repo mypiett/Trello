@@ -223,8 +223,6 @@ export class AuthService {
   }
 
   async forgetPassword(email: string) {
-    console.log('🔍 [AUTH DEBUG] Tìm user với email:', email);
-
     const user = await this.userRepository.findOne({
       where: { email },
     });
@@ -240,8 +238,6 @@ export class AuthService {
         'Tài khoản chưa được kích hoạt, vui lòng kiểm tra email để xác thực trước.'
       );
     }
-
-    console.log('✅ [AUTH DEBUG] User found:', user.id);
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 

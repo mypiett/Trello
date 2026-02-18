@@ -129,7 +129,6 @@ export class WorkspaceController {
   static async getUserWorkspaces(req: Request): Promise<ServiceResponse<any>> {
     try {
       const userId = req.user?.userId;
-      console.log('Fetching workspaces for user ID:', userId);
       const workspaces = await workspaceService.getWorkspacesByUserId(userId);
       return new ServiceResponse(
         ResponseStatus.Success,
@@ -146,14 +145,12 @@ export class WorkspaceController {
       );
     }
   }
-
-  // Get archived workspaces
+  
   static async getArchivedWorkspaces(
     req: Request
   ): Promise<ServiceResponse<any>> {
     try {
       const userId = req.user?.userId;
-      console.log('Fetching archived workspaces for user ID:', userId);
       const workspaces =
         await workspaceService.getArchivedWorkspacesByUserId(userId);
       return new ServiceResponse(

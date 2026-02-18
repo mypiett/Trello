@@ -181,8 +181,9 @@ export class WorkspaceService {
     }));
 
     const boards = await boardsQb
-      .select(['board.id', 'board.title', 'board.description', 'board.coverUrl', 'board.visibility', 'board.createdAt', 'workspace.id'])
+      .select(['board.id', 'board.title', 'board.description', 'board.coverUrl', 'board.visibility', 'board.createdAt', 'workspace.id', 'member.id', 'member.roleId', 'member.status'])
       .getMany();
+
 
     const boardsMap = new Map<string, any[]>();
     boards.forEach((b) => {

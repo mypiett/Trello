@@ -235,7 +235,7 @@ export default function BoardDetailPage() {
                     nextColumnId,
                     nextIndex: apiNextIndex < 0 ? 0 : apiNextIndex,
                 });
-                console.log(`Moved: ${prevColumnId} -> ${nextColumnId}`);
+                // console.log(`Moved: ${prevColumnId} -> ${nextColumnId}`);
             }
         } catch (error) {
             console.error("Move failed:", error);

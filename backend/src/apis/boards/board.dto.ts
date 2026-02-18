@@ -12,4 +12,7 @@ export class UpdateBoardDto {
   coverUrl?: string;
   isClosed?: boolean;
   visibility?: 'private' | 'public' | 'workspace';
+  commentPolicy?: 'disabled' | 'members' | 'workspace' | 'anyone';
+  memberManagePolicy?: 'admins_only' | 'all_members';
+  workspaceMembersCanEditAndJoin?: boolean;
 }

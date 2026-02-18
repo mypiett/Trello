@@ -17,9 +17,10 @@ interface Props {
     cardId: string;
     attachments: Attachment[];
     onUpdate: () => void;
+    canEdit?: boolean;
 }
 
-export function CardAttachments({ cardId, attachments = [], onUpdate }: Props) {
+export function CardAttachments({ cardId, attachments = [], onUpdate, canEdit = true }: Props) {
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,12 +88,14 @@ export function CardAttachments({ cardId, attachments = [], onUpdate }: Props) {
                                 >
                                     <Download className="h-3 w-3 mr-1" /> Tải xuống
                                 </a>
-                                <button
-                                    className="text-xs text-gray-700 underline flex items-center hover:text-red-600"
-                                    onClick={() => handleDelete(att.id)}
-                                >
-                                    <X className="h-3 w-3 mr-1" /> Xóa
-                                </button>
+                                {canEdit && (
+                                    <button
+                                        className="text-xs text-gray-700 underline flex items-center hover:text-red-600"
+                                        onClick={() => handleDelete(att.id)}
+                                    >
+                                        <X className="h-3 w-3 mr-1" /> Xóa
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -103,18 +106,20 @@ export function CardAttachments({ cardId, attachments = [], onUpdate }: Props) {
                 )}
             </div>
 
-            <div>
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileSelect}
-                />
-                <Button variant="secondary" size="sm" className="font-bold text-gray-700 bg-gray-200 hover:bg-gray-300" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                    {isUploading ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Paperclip className="h-3.5 w-3.5 mr-2" />}
-                    Thêm đính kèm
-                </Button>
-            </div>
+            {canEdit && (
+                <div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleFileSelect}
+                    />
+                    <Button variant="secondary" size="sm" className="font-bold text-gray-700 bg-gray-200 hover:bg-gray-300" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                        {isUploading ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Paperclip className="h-3.5 w-3.5 mr-2" />}
+                        Thêm đính kèm
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

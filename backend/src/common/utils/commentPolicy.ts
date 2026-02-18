@@ -22,6 +22,10 @@ export async function checkCommentPermissionForUser(
     relations: ['workspace'],
   });
 
+  if (board) {
+    console.log(`[DEBUG] checkCommentPermission: Board=${board.id} Policy=${board.commentPolicy} User=${userId}`);
+  }
+
   if (!board) {
     return { allowed: false, reason: 'Board not found' };
   }
@@ -30,10 +34,22 @@ export async function checkCommentPermissionForUser(
 
   // 1. Tắt hẳn comment
   if (policy === 'disabled') {
-    return {
-      allowed: false,
-      reason: 'Commenting is disabled on this board',
-    };
+    // ALLOW ADMINS!
+    const boardMember = await boardMemberRepo.findOne({
+      where: { boardId, userId },
+      relations: ['role'],
+    });
+
+    // Check if admin/owner
+    const roleName = boardMember?.role?.name;
+    const isAdmin = roleName === 'Board Owner' || roleName === 'Board Admin';
+
+    if (!isAdmin) {
+      return {
+        allowed: false,
+        reason: 'Commenting is disabled on this board',
+      };
+    }
   }
 
   // 2. Ai login cũng comment được

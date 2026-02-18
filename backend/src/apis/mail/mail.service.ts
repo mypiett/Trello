@@ -42,7 +42,6 @@ export class EmailService {
         </div>
       `,
     });
-    console.log(`[MAIL SENT] OTP sent to ${email}`);
   }
 
   async sendForgotPasswordEmail(email: string, code: string) {

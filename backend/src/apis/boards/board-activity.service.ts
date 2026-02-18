@@ -18,7 +18,6 @@ export class BoardActivityService {
     targetId?: string;
     metadata?: any;
   }) {
-    console.log('BoardActivityService.logActivity params:', params);
     const activity = this.repo.create({
       boardId: params.boardId,
       actorId: params.actorId ?? null,
@@ -29,13 +28,10 @@ export class BoardActivityService {
     } as DeepPartial<BoardActivity>);
 
     const saved = await this.repo.save(activity);
-    console.log('BoardActivityService.logActivity saved:', saved);
     return saved;
   }
 
   async getBoardActivity(boardId: string, page = 1, limit = 20) {
-    console.log('BoardActivityService.getBoardActivity fetching for board:', boardId);
-
     const query = this.repo.createQueryBuilder('activity')
       .leftJoinAndSelect('activity.actor', 'actor')
       .where('activity.boardId = :boardId', { boardId })

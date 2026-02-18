@@ -11,9 +11,10 @@ interface Props {
     currentDescription?: string;
     onUpdate?: () => void;
     children?: React.ReactNode;
+    canEdit?: boolean;
 }
 
-export function BoardInfoDialog({ boardId, currentDescription, onUpdate, children }: Props) {
+export function BoardInfoDialog({ boardId, currentDescription, onUpdate, children, canEdit = true }: Props) {
     const [description, setDescription] = useState(currentDescription || "");
     const [isOpen, setIsOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -54,18 +55,21 @@ export function BoardInfoDialog({ boardId, currentDescription, onUpdate, childre
                             Mô tả
                         </label>
                         <Textarea
-                            placeholder="Thêm mô tả chi tiết cho bảng của bạn..."
+                            placeholder={canEdit ? "Thêm mô tả chi tiết cho bảng của bạn..." : "Bảng này chưa có mô tả."}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="min-h-[150px]"
+                            readOnly={!canEdit}
                         />
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsOpen(false)}>Hủy</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? "Đang lưu..." : "Lưu"}
-                        </Button>
-                    </div>
+                    {canEdit && (
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setIsOpen(false)}>Hủy</Button>
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? "Đang lưu..." : "Lưu"}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>

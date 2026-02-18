@@ -3,6 +3,7 @@ import { CardRepository } from './card.repository';
 import { NotificationService } from '@/apis/notification/notification.service';
 import { NotificationType } from '@/common/entities/notification.entity';
 import { boardActivityService } from '../boards/board-activity.service';
+import { checkCommentPermissionForUser } from '@/common/utils/commentPolicy';
 
 export class CardService {
   private cardRepository = new CardRepository();
@@ -41,7 +42,6 @@ export class CardService {
       if (!sourceCard) {
         throw new Error('Source card not found');
       }
-      console.log('Source Card:', sourceCard);
       title = title || sourceCard.title;
       description = description || sourceCard.description;
       position = position !== undefined ? position : sourceCard.position;
@@ -123,6 +123,7 @@ export class CardService {
       coverUrl,
       start,
       due,
+      dueReminder,
       isCompleted,
     } = updateData;
     const updatedCard = await this.cardRepository.updateCard(cardId, {
@@ -135,6 +136,7 @@ export class CardService {
       coverUrl,
       start,
       due,
+      dueReminder,
       isCompleted,
     });
     if (!updatedCard) {
@@ -160,6 +162,11 @@ export class CardService {
         changes.start = { old: oldCard.start, new: start };
       if (due !== undefined && due?.toString() !== oldCard.due?.toString())
         changes.due = { old: oldCard.due, new: due };
+      if (
+        dueReminder !== undefined &&
+        dueReminder?.toString() !== oldCard.dueReminder?.toString()
+      )
+        changes.dueReminder = { old: oldCard.dueReminder, new: dueReminder };
 
       if (Object.keys(changes).length > 0) {
         await this.cardRepository.logUpdateAction(cardId, userId, changes);
@@ -298,9 +305,27 @@ export class CardService {
   }
 
   async addComment(cardId: string, userId: string, text: string): Promise<any> {
-    const card = await this.cardRepository.getCardWithMembers(cardId);
+    const card = await this.cardRepository.getCardById(cardId, {
+      fields: 'board', // Request board relation
+    });
     if (!card) {
       throw new Error('Card not found');
+    }
+
+    const boardId = card.board?.id;
+    if (!boardId) {
+      // Fallback or error if data integrity issue
+      console.error(`Card ${cardId} has no board associated`);
+      throw new Error('Board context missing for card');
+    }
+
+    const { allowed, reason } = await checkCommentPermissionForUser(
+      boardId,
+      userId
+    );
+
+    if (!allowed) {
+      throw new Error(reason || 'You do not have permission to comment on this board');
     }
 
     const action = await this.cardRepository.addComment(cardId, userId, text);
