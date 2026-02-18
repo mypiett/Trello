@@ -1,5 +1,5 @@
 import { AppDataSource } from '../../config/data-source';
-import { In } from 'typeorm';
+import { In, Brackets } from 'typeorm';
 import { User } from '../../common/entities/user.entity';
 import {
   createWorkspaceDto,
@@ -165,11 +165,22 @@ export class WorkspaceService {
     // We can find 'myRole' from there.
 
     // Fetch boards
-    const boards = await this.boardRepository
+    // Fetch boards with visibility check
+    const boardsQb = this.boardRepository
       .createQueryBuilder('board')
       .leftJoin('board.workspace', 'workspace')
+      .leftJoin('board.boardMembers', 'member', 'member.userId = :userId', { userId })
       .where('board.workspaceId IN (:...ids)', { ids: allIds })
-      .andWhere('board.isClosed = :isClosed', { isClosed: false })
+      .andWhere('board.isClosed = :isClosed', { isClosed: false });
+
+    // Apply visibility filter
+    boardsQb.andWhere(new Brackets((subQb) => {
+      subQb.where('board.visibility = :public', { public: 'public' })
+        .orWhere('board.visibility = :workspace', { workspace: 'workspace' })
+        .orWhere('member.id IS NOT NULL');
+    }));
+
+    const boards = await boardsQb
       .select(['board.id', 'board.title', 'board.description', 'board.coverUrl', 'board.visibility', 'board.createdAt', 'workspace.id'])
       .getMany();
 
@@ -246,28 +257,57 @@ export class WorkspaceService {
 
     // Fetch boards riêng (bao gồm cả closed boards cho archived workspace)
     const workspaceIds = workspaces.map((wm) => wm.workspace.id);
-    const boards =
-      workspaceIds.length > 0
-        ? await this.workspaceRepository
-          .createQueryBuilder('w')
-          .leftJoinAndSelect('w.boards', 'board')
-          .where('w.id IN (:...workspaceIds)', { workspaceIds })
-          .select([
-            'w.id',
-            'board.id',
-            'board.title',
-            'board.description',
-            'board.coverUrl',
-            'board.visibility',
-            'board.isClosed',
-            'board.createdAt',
-          ])
-          .getMany()
-        : [];
+    const boardsQb = this.workspaceRepository
+      .createQueryBuilder('w')
+      .leftJoinAndSelect('w.boards', 'board')
+      .leftJoin('board.boardMembers', 'member', 'member.userId = :userId', { userId }) // Join to check membership
+      .where('w.id IN (:...workspaceIds)', { workspaceIds });
+
+    // Apply visibility filter for boards within archived workspaces ??
+    // Actually, w.boards is a direct relation Join. filtering on relation is trickier in TypeORM find/QueryBuilder if valid for all.
+    // Better to query Board repository directly like above?
+    // The original code used workspace repo to join boards. 
+    // Let's rewrite to use Board Repo for cleaner filtering.
+
+    const boards = workspaceIds.length > 0
+      ? await this.boardRepository.createQueryBuilder('board')
+        .leftJoin('board.workspace', 'workspace')
+        .leftJoin('board.boardMembers', 'member', 'member.userId = :userId', { userId })
+        .where('board.workspaceId IN (:...workspaceIds)', { workspaceIds })
+        // Note: Original code didn't filter closed? "bao gồm cả closed boards" comment.
+        // But actually we probably want to filter visibility still.
+        .andWhere(new Brackets((subQb) => {
+          subQb.where('board.visibility = :public', { public: 'public' })
+            .orWhere('board.visibility = :workspace', { workspace: 'workspace' })
+            .orWhere('member.id IS NOT NULL');
+        }))
+        .select([
+          'board.id',
+          'board.title',
+          'board.description',
+          'board.coverUrl',
+          'board.visibility',
+          'board.isClosed',
+          'board.createdAt',
+          'workspace.id'
+        ])
+        .getMany()
+      : [];
+
+    // Transform to match expected Map structure (workspace.id -> boards)
+    // The original code was returning Workspaces with boards joined.
+    // boards returned above are Board entities with workspace loaded? 
+    // Yes if we select workspace.id.
+    // But `boardsMap` expects just array of boards.
 
     const boardsMap = new Map<string, any[]>();
-    boards.forEach((w) => {
-      boardsMap.set(w.id, w.boards || []);
+    boards.forEach((b: any) => { // b is Board
+      const wid = b.workspace?.id;
+      if (wid) {
+        const current = boardsMap.get(wid) || [];
+        current.push(b);
+        boardsMap.set(wid, current);
+      }
     });
 
     return workspaces.map((wm) => ({
