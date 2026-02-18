@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Activity } from "lucide-react";
+import { Activity, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import { boardApi } from "@/shared/api/board.api";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { Button } from "@/shared/ui/button";
 
 interface Props {
     boardId: string;
@@ -15,19 +16,48 @@ interface Props {
 export function BoardActivitySidebar({ boardId, children }: Props) {
     const [activities, setActivities] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [tab, setTab] = useState('all');
+    const PAGE_SIZE = 5;
 
-    const fetchActivities = async () => {
+    const fetchActivities = async (pageToFetch: number, isReset: boolean = false) => {
         setLoading(true);
         try {
-            const res: any = await boardApi.getActivities(boardId);
+            const res: any = await boardApi.getActivities(boardId, pageToFetch, PAGE_SIZE);
             // Backend returns: { items: [...], total: ..., page: ..., pageSize: ... }
-            // Wrapped in ServiceResponse: res.responseObject
-            const data = res.responseObject || res.data || {};
-            const items = Array.isArray(data.items) ? data.items : [];
-            setActivities(items);
+            // API Factory likely returns the data directly or we extract it
+            const data = res.responseObject || res.data || res.element || res || {};
+
+            // Allow for different response structures just in case
+            const items = Array.isArray(data.items) ? data.items :
+                (Array.isArray(data) ? data : []);
+
+            const total = data.total || 0;
+
+            if (isReset) {
+                setActivities(items);
+            } else {
+                setActivities(prev => [...prev, ...items]);
+            }
+
+            // Robust hasMore check using total
+            // If we have minimal total, or if we've fetched enough pages
+            if (typeof total === 'number' && total > 0) {
+                // Check if the number of items fetched so far (including this page) covers the total
+                // Note: activities.length is stale here, so we estimate.
+                // Better: If we received fewer items than requested, we are done.
+                // OR: current page * PAGE_SIZE < total
+                setHasMore(pageToFetch * PAGE_SIZE < total);
+            } else {
+                // Fallback if total is missing
+                setHasMore(items.length === PAGE_SIZE);
+            }
+
         } catch (error) {
             console.error("Failed to fetch activities", error);
-            setActivities([]);
+            if (isReset) setActivities([]);
+            setHasMore(false);
         } finally {
             setLoading(false);
         }
@@ -35,9 +65,17 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
 
     useEffect(() => {
         if (boardId) {
-            fetchActivities();
+            setPage(1);
+            setHasMore(true);
+            fetchActivities(1, true);
         }
     }, [boardId]);
+
+    const loadMore = () => {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchActivities(nextPage, false);
+    };
 
     const getInitials = (name: string) => {
         if (!name) return "??";
@@ -62,8 +100,14 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
             case 'LIST_CREATED': return `đã tạo danh sách "${meta.listTitle || 'mới'}"`;
             case 'LIST_RENAMED': return `đã đổi tên danh sách thành "${meta.listTitle}"`;
             case 'LIST_ARCHIVED': return `đã lưu trữ danh sách "${meta.listTitle}"`;
+            case 'LIST_MOVED': return `đã di chuyển danh sách "${meta.listTitle}" sang vị trí mới`;
             case 'CARD_CREATED': return `đã tạo thẻ "${meta.cardTitle || 'mới'}"`;
             case 'CARD_UPDATED': return `đã cập nhật thẻ "${meta.cardTitle || ''}"`;
+            case 'CARD_MOVED':
+                if (meta.fromListTitle && meta.toListTitle && meta.fromListId !== meta.toListId) {
+                    return `đã di chuyển thẻ "${meta.cardTitle}" từ danh sách "${meta.fromListTitle}" sang "${meta.toListTitle}"`;
+                }
+                return `đã di chuyển thẻ "${meta.cardTitle || 'thẻ'}" sang vị trí mới`;
             case 'CARD_ARCHIVED': return `đã lưu trữ thẻ "${meta.cardTitle}"`;
             case 'MEMBER_ADDED': return 'đã thêm thành viên vào bảng';
             case 'MEMBER_REMOVED': return 'đã xóa thành viên khỏi bảng';
@@ -72,7 +116,20 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
         }
     };
 
-    const comments = activities.filter(a => a.actionType === 'COMMENT_ADDED');
+    const filteredActivities = tab === 'comments'
+        ? activities.filter(a => a.actionType === 'COMMENT_ADDED')
+        : activities;
+
+    const translateField = (field: string) => {
+        const map: Record<string, string> = {
+            'coverUrl': 'ảnh bìa',
+            'visibility': 'quyền riêng tư',
+            'commentPolicy': 'quyền bình luận',
+            'memberManagePolicy': 'quyền quản lý thành viên',
+            'workspaceMembersCanEditAndJoin': 'quyền thành viên workspace'
+        };
+        return map[field] || field;
+    };
 
     return (
         <Sheet>
@@ -87,9 +144,7 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
                     </SheetTitle>
                 </SheetHeader>
 
-                <Tabs defaultValue="all" className="w-full mt-4 flex-1 flex flex-col" onValueChange={(val) => {
-                    if (val === 'all' || val === 'comments') fetchActivities();
-                }}>
+                <Tabs value={tab} onValueChange={setTab} className="w-full mt-4 flex-1 flex flex-col">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="all">Tất cả</TabsTrigger>
                         <TabsTrigger value="comments">Bình luận</TabsTrigger>
@@ -97,13 +152,11 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
 
                     <div className="flex-1 overflow-y-auto mt-4 pr-2 custom-scrollbar">
                         <TabsContent value="all" className="mt-0 space-y-4">
-                            {loading ? (
-                                <p className="text-center text-gray-500 text-sm py-4">Đang tải...</p>
-                            ) : activities.length === 0 ? (
+                            {filteredActivities.length === 0 && !loading ? (
                                 <p className="text-center text-gray-500 text-sm py-4">Chưa có hoạt động nào.</p>
                             ) : (
-                                activities.map((action) => (
-                                    <div key={action.id} className="flex gap-3 items-start text-sm">
+                                filteredActivities.map((action) => (
+                                    <div key={action.id} className="flex gap-3 items-start text-sm group">
                                         <Avatar className="h-8 w-8 mt-1">
                                             <AvatarImage src={action.actor?.avatarUrl} />
                                             <AvatarFallback>{getInitials(getDisplayName(action.actor))}</AvatarFallback>
@@ -119,6 +172,7 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
                                             <p className="text-xs text-gray-400 mt-1">
                                                 {formatDistanceToNow(new Date(action.createdAt), { addSuffix: true, locale: vi })}
                                             </p>
+
                                             {/* Show comment text if it's a comment */}
                                             {action.actionType === 'COMMENT_ADDED' && action.metadata?.text && (
                                                 <div
@@ -126,12 +180,13 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
                                                     dangerouslySetInnerHTML={{ __html: action.metadata.text }}
                                                 />
                                             )}
+
                                             {/* Show changed fields for updates */}
                                             {action.actionType === 'BOARD_SETTINGS_UPDATED' && action.metadata?.changedFields && (
-                                                <div className="mt-1 text-xs text-gray-500">
+                                                <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded border">
                                                     {Object.keys(action.metadata.changedFields).map(key => (
-                                                        <div key={key}>
-                                                            • Thay đổi {key}
+                                                        <div key={key} className="flex items-center gap-1">
+                                                            <span>• Đã thay đổi <b>{translateField(key)}</b></span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -140,15 +195,33 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
                                     </div>
                                 ))
                             )}
+
+                            {loading && (
+                                <div className="flex justify-center py-4">
+                                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                                </div>
+                            )}
+
+                            {!loading && hasMore && filteredActivities.length > 0 && (
+                                <div className="py-2 text-center">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={loadMore}
+                                        className="text-gray-500 hover:text-gray-900"
+                                    >
+                                        Tải thêm hoạt động cũ hơn...
+                                    </Button>
+                                </div>
+                            )}
                         </TabsContent>
 
                         <TabsContent value="comments" className="mt-0 space-y-4">
-                            {loading ? (
-                                <p className="text-center text-gray-500 text-sm py-4">Đang tải...</p>
-                            ) : comments.length === 0 ? (
+                            {/* Reuse similar structure for comments tab if needed, logic handled by filteredActivities */}
+                            {filteredActivities.length === 0 && !loading ? (
                                 <p className="text-center text-gray-500 text-sm py-4">Chưa có bình luận nào.</p>
                             ) : (
-                                comments.map((action) => (
+                                filteredActivities.map((action) => (
                                     <div key={action.id} className="flex gap-3 items-start text-sm">
                                         <Avatar className="h-8 w-8 mt-1">
                                             <AvatarImage src={action.actor?.avatarUrl} />
@@ -171,6 +244,23 @@ export function BoardActivitySidebar({ boardId, children }: Props) {
                                         </div>
                                     </div>
                                 ))
+                            )}
+                            {loading && (
+                                <div className="flex justify-center py-4">
+                                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                                </div>
+                            )}
+                            {!loading && hasMore && filteredActivities.length > 0 && (
+                                <div className="py-2 text-center">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={loadMore}
+                                        className="text-gray-500 hover:text-gray-900"
+                                    >
+                                        Tải thêm bình luận cũ hơn...
+                                    </Button>
+                                </div>
                             )}
                         </TabsContent>
                     </div>

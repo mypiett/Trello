@@ -80,8 +80,8 @@ export const boardApi = {
         });
     },
 
-    getActivities: (boardId: string) => {
-        return apiFactory.get(`/boards/${boardId}/activities`);
+    getActivities: (boardId: string, page = 1, limit = 20) => {
+        return apiFactory.get(`/boards/${boardId}/activities?page=${page}&limit=${limit}`);
     },
 
     getArchivedLists: (boardId: string) => {

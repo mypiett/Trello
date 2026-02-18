@@ -58,7 +58,8 @@ export class BoardController {
         );
       }
 
-      const boards = await boardService.getBoards(workspaceId);
+      const userId = req.user?.userId;
+      const boards = await boardService.getBoards(workspaceId, userId);
       return new ServiceResponse(
         ResponseStatus.Success,
         'Boards retrieved successfully',

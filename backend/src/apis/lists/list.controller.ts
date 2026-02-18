@@ -91,9 +91,11 @@ export class ListController {
     }
   }
 
-  static async archiveList(listId: string): Promise<ServiceResponse<any>> {
+  static async archiveList(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const result = await listService.archiveList(listId);
+      const listId = req.params.id as string;
+      const userId = req.user?.userId;
+      const result = await listService.archiveList(listId, userId);
       return new ServiceResponse(
         ResponseStatus.Success,
         'List archived successfully',
@@ -110,9 +112,11 @@ export class ListController {
     }
   }
 
-  static async unarchiveList(listId: string): Promise<ServiceResponse<any>> {
+  static async unarchiveList(req: Request): Promise<ServiceResponse<any>> {
     try {
-      const result = await listService.unarchiveList(listId);
+      const listId = req.params.id as string;
+      const userId = req.user?.userId;
+      const result = await listService.unarchiveList(listId, userId);
       return new ServiceResponse(
         ResponseStatus.Success,
         'List unarchived successfully',
@@ -150,16 +154,17 @@ export class ListController {
     }
   }
 
-  static async moveListToBoard(
-    listId: string,
-    boardId: string,
-    position: number
-  ): Promise<ServiceResponse<any>> {
+  static async moveListToBoard(req: Request): Promise<ServiceResponse<any>> {
     try {
+      const listId = req.params.id as string;
+      const { boardId, position } = req.body;
+      const userId = req.user?.userId;
+
       const result = await listService.moveListToBoard(
         listId,
         boardId,
-        position
+        position,
+        userId
       );
       return new ServiceResponse(
         ResponseStatus.Success,
@@ -233,16 +238,16 @@ export class ListController {
     }
   }
 
-  static async reorderList(
-    currentListId: string,
-    prevListId: string,
-    nextListId: string
-  ): Promise<ServiceResponse<any>> {
+  static async reorderList(req: Request): Promise<ServiceResponse<any>> {
     try {
+      const { currentListId, prevListId, nextListId } = req.body;
+      const userId = req.user?.userId;
+
       const result = await listService.reorderList(
         currentListId,
         prevListId,
-        nextListId
+        nextListId,
+        userId
       );
       return new ServiceResponse(
         ResponseStatus.Success,

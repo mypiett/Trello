@@ -673,6 +673,7 @@ export class CardController {
         prevIndex,
         nextColumnId,
         nextIndex,
+        userId: req.user?.userId,
       });
 
       return new ServiceResponse(

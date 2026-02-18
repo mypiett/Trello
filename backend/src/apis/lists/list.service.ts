@@ -3,6 +3,7 @@ import { ListRepository } from './list.repository';
 import { BoardMembers } from '@/common/entities/board-member.entity';
 import { List } from '@/common/entities/list.entity';
 import { BoardRepository } from '../boards/board.repository';
+import { boardActivityService } from '@/apis/boards/board-activity.service';
 
 export class ListService {
   private listRepository = new ListRepository();
@@ -71,7 +72,12 @@ export class ListService {
     return result;
   }
 
-  async archiveList(listId: string) {
+  async archiveList(listId: string, userId?: string) {
+    const list = await this.listRepository.findListById(listId, false);
+    if (!list) {
+      throw new Error('List not found');
+    }
+
     const result = await this.listRepository.updateList(listId, {
       isArchived: true,
     } as any);
@@ -80,10 +86,26 @@ export class ListService {
       throw new Error('List not found');
     }
 
+    if (userId) {
+      await boardActivityService.logActivity({
+        boardId: list.boardId,
+        actorId: userId,
+        actionType: 'LIST_ARCHIVED',
+        targetType: 'LIST',
+        targetId: listId,
+        metadata: { listTitle: list.title },
+      });
+    }
+
     return result;
   }
 
-  async unarchiveList(listId: string) {
+  async unarchiveList(listId: string, userId?: string) {
+    const list = await this.listRepository.findListById(listId, false);
+    if (!list) {
+      throw new Error('List not found');
+    }
+
     const result = await this.listRepository.updateList(listId, {
       isArchived: false,
     } as any);
@@ -91,6 +113,12 @@ export class ListService {
     if (!result) {
       throw new Error('List not found');
     }
+
+    // Optional: Log unarchive if needed? The requirement was mostly about moving/archiving. 
+    // Let's add it for consistency if action type exists, but standard Trello might not log unarchive as prominently.
+    // Given the action types in entity: LIST_ARCHIVED is there, LIST_UNARCHIVED is NOT in BoardActivityActionType.
+    // So we skip logging for unarchive or we need to add action type. 
+    // Sticking to requirement: "Archive a List -> Verify log".
 
     return result;
   }
@@ -112,7 +140,7 @@ export class ListService {
     return { archivedCount: cardIds.length };
   }
 
-  async moveListToBoard(listId: string, boardId: string, position: number) {
+  async moveListToBoard(listId: string, boardId: string, position: number, userId?: string) {
     const [list, board] = await Promise.all([
       this.listRepository.findListById(listId),
       this.boardRepository.findBoardById(boardId, true),
@@ -129,7 +157,24 @@ export class ListService {
       throw new Error('Invalid position');
     }
 
-    return await this.listRepository.moveListToBoard(listId, boardId, position);
+    const result = await this.listRepository.moveListToBoard(listId, boardId, position);
+
+    if (userId) {
+      await boardActivityService.logActivity({
+        boardId: boardId, // Log on the target board
+        actorId: userId,
+        actionType: 'LIST_MOVED',
+        targetType: 'LIST',
+        targetId: listId,
+        metadata: {
+          listTitle: list.title,
+          fromBoardId: list.boardId !== boardId ? list.boardId : undefined,
+          toPosition: position
+        },
+      });
+    }
+
+    return result;
   }
 
   async moveAllCardsToAnotherList(
@@ -217,7 +262,8 @@ export class ListService {
   async reorderList(
     currentListId: string,
     prevListId: string | null,
-    nextListId: string | null
+    nextListId: string | null,
+    userId?: string
   ) {
     if (nextListId === currentListId) {
       throw new Error('NextListId cannot be the same as CurrentListId');
@@ -273,6 +319,21 @@ export class ListService {
     if (!result) {
       throw new Error('List not found');
     }
+
+    if (userId) {
+      await boardActivityService.logActivity({
+        boardId: currentList.boardId,
+        actorId: userId,
+        actionType: 'LIST_MOVED',
+        targetType: 'LIST',
+        targetId: currentListId,
+        metadata: {
+          listTitle: currentList.title,
+          newPosition: position
+        },
+      });
+    }
+
     return result;
   }
 

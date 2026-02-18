@@ -703,10 +703,16 @@ export class CardService {
     prevIndex: number;
     nextColumnId: string;
     nextIndex: number;
+    userId?: string;
   }): Promise<any> {
-    const { cardId, prevColumnId, prevIndex, nextColumnId, nextIndex } = data;
+    const { cardId, prevColumnId, prevIndex, nextColumnId, nextIndex, userId } =
+      data;
     const cardToMove = await this.cardRepository.getCardById(cardId, {});
     if (!cardToMove) throw new Error('Card not found');
+
+    const prevList = await this.listRepository.findListById(prevColumnId, false);
+    const nextList = await this.listRepository.findListById(nextColumnId, false);
+
     if (prevColumnId === nextColumnId) {
       if (prevIndex === nextIndex) return cardToMove;
 
@@ -720,6 +726,24 @@ export class CardService {
           this.cardRepository.updateCard(card.id, { position: index })
         )
       );
+
+      if (userId) {
+        await boardActivityService.logActivity({
+          boardId: cardToMove.boardId,
+          actorId: userId,
+          actionType: 'CARD_MOVED',
+          targetType: 'CARD',
+          targetId: cardId,
+          metadata: {
+            cardTitle: cardToMove.title,
+            listTitle: prevList?.title,
+            fromListId: prevColumnId,
+            toListId: nextColumnId, // Same list
+            oldPosition: prevIndex,
+            newPosition: nextIndex
+          }
+        });
+      }
 
       return { ...cardToMove, position: nextIndex };
     } else {
@@ -752,6 +776,23 @@ export class CardService {
           return this.cardRepository.updateCard(card.id, { position: index });
         })
       );
+
+      if (userId) {
+        await boardActivityService.logActivity({
+          boardId: cardToMove.boardId,
+          actorId: userId,
+          actionType: 'CARD_MOVED',
+          targetType: 'CARD',
+          targetId: cardId,
+          metadata: {
+            cardTitle: cardToMove.title,
+            fromListTitle: prevList?.title,
+            toListTitle: nextList?.title,
+            fromListId: prevColumnId,
+            toListId: nextColumnId
+          }
+        });
+      }
 
       return { ...cardToMove, listId: nextColumnId, position: nextIndex };
     }

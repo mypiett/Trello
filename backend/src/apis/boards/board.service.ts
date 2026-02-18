@@ -1,3 +1,4 @@
+import { Brackets } from 'typeorm';
 import { User } from '@/common/entities/user.entity';
 import { Board } from '../../common/entities/board.entity';
 import { Workspace } from '../../common/entities/workspace.entity';
@@ -80,28 +81,38 @@ export class BoardService {
     return savedBoard;
   }
 
-  async getBoards(workspaceId: string) {
-    return await this.boardRepository.find({
-      where: {
-        workspace: { id: workspaceId, isArchived: false },
-        isClosed: false,
-      },
-      relations: ['workspace'],
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        coverUrl: true,
-        visibility: true,
-        isClosed: true,
-        createdAt: true,
-        updatedAt: true,
-        workspace: {
-          id: true,
-          title: true,
-        },
-      },
-    });
+  async getBoards(workspaceId: string, userId?: string) {
+    const qb = this.boardRepository
+      .createQueryBuilder('board')
+      .leftJoinAndSelect('board.workspace', 'workspace')
+      .leftJoin('board.boardMembers', 'member', 'member.userId = :userId', { userId })
+      .where('workspace.id = :workspaceId', { workspaceId })
+      .andWhere('workspace.isArchived = :isArchived', { isArchived: false })
+      .andWhere('board.isClosed = :isClosed', { isClosed: false });
+
+    // Filter by visibility/membership if userId provided
+    if (userId) {
+      qb.andWhere(new Brackets((subQb) => {
+        subQb.where('board.visibility = :public', { public: 'public' })
+          .orWhere('board.visibility = :workspace', { workspace: 'workspace' })
+          .orWhere('member.id IS NOT NULL');
+      }));
+    }
+
+    qb.select([
+      'board.id',
+      'board.title',
+      'board.description',
+      'board.coverUrl',
+      'board.visibility',
+      'board.isClosed',
+      'board.createdAt',
+      'board.updatedAt',
+      'workspace.id',
+      'workspace.title',
+    ]);
+
+    return await qb.getMany();
   }
 
   async getBoardById(id: string) {
