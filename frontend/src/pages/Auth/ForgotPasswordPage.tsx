@@ -42,19 +42,28 @@ export const ForgotPasswordPage = () => {
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        
+        if (!otp || !newPassword || !confirmPassword) {
+            setError("Vui lòng nhập đầy đủ thông tin.");
+            return;
+        }
 
+        if (otp.length !== 6) {
+            setError("Mã OTP phải có 6 số.");
+            return;
+        }
         if (newPassword !== confirmPassword) {
             setError("Mật khẩu nhập lại không khớp.");
-            return;
+            return; 
         }
 
         setIsLoading(true);
 
         try {
             await apiFactory.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-                email,
-                otp,
-                password: newPassword
+                email: email,
+                code: otp,
+                newPassword: newPassword
             });
 
             setSuccess(true);

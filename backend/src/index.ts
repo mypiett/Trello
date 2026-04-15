@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import { setupSwagger } from './config/swagger';
-// import * as dotenv from 'dotenv'; // Removed as we use 'dotenv/config'
 import { AppDataSource } from './config/data-source';
 import AppRoute from './apis/index';
 import { connectRedis } from './config/redisClient';

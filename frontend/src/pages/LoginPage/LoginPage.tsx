@@ -1,20 +1,11 @@
 import { LoginForm } from "@/features/auth/ui";
 import { useNavigate } from "react-router-dom";
-import { tokenStorage } from "@/shared/utils/tokenStorage";
-import type { User } from "@/shared/types";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
 
-  const handleSuccess = (result: {
-    accessToken: string;
-    refreshToken: string;
-    user: User;
-  }) => {
-    tokenStorage.setAccessToken(result.accessToken);
-    tokenStorage.setRefreshToken(result.refreshToken);
-    tokenStorage.setUser(result.user);
-    navigate("/dashboard");
+  const handleSuccess = () => {
+    navigate("/dashboard", { replace: true });
   };
 
   const bgImage = "https://demoda.vn/wp-content/uploads/2023/06/hinh-nen-dektop-4k-dep.jpg";

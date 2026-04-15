@@ -6,6 +6,7 @@ import { VerifyPage } from "@/pages/RegisterPage/VerifyPage";
 import { ForgotPasswordPage } from "@/pages/Auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/Auth/ResetPasswordPage";
 import BoardPage from "@/pages/Board/BoardPage";
+import { ProtectedRoute } from "@/shared/route/ProtectedRoute";
 
 const LoginPage = lazy(() =>
     import("@/pages/LoginPage/LoginPage").then(module => ({ default: module.LoginPage }))
@@ -30,25 +31,91 @@ const SettingsPage = lazy(() => import("@/pages/Settings/SettingsPage"));
 const InviteResponsePage = lazy(() => import("@/pages/Invite/InviteResponsePage").then(module => ({ default: module.InviteResponsePage })));
 
 export const AppRouter = () => {
-    return (
-        <Suspense fallback={<PageLoader />}>
-            <Routes>
-                <Route path={ROUTES.HOME} element={<Navigate to={ROUTES.LOGIN} replace />} />
-                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-                <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/profile/edit" element={<ProfileEditPage />} />
-                <Route path="/verify" element={<VerifyPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-                <Route path="/archives" element={<ArchivesPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/boards/:boardId" element={<BoardPage />} />
-                <Route path="/invite/accept" element={<InviteResponsePage />} />
-                <Route path="/invite/decline" element={<InviteResponsePage />} />
-            </Routes>
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* PUBLIC ROUTES */}
+        <Route path={ROUTES.HOME} element={<Navigate to={ROUTES.LOGIN} replace />} />
+        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify" element={<VerifyPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+
+        {/* PROTECTED ROUTES */}
+        <Route
+          path={ROUTES.DASHBOARD}
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile/edit"
+          element={
+            <ProtectedRoute>
+              <ProfileEditPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/archives"
+          element={
+            <ProtectedRoute>
+              <ArchivesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/boards/:boardId"
+          element={
+            <ProtectedRoute>
+              <BoardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/invite/accept"
+          element={
+            <ProtectedRoute>
+              <InviteResponsePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/invite/decline"
+          element={
+            <ProtectedRoute>
+              <InviteResponsePage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
+  );
 };

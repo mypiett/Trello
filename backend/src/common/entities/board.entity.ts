@@ -77,7 +77,10 @@ export class Board extends DateTimeEntity {
   public workspace: Workspace;
 
   // lists
-  @OneToMany(() => List, (list) => list.board)
+  @OneToMany(() => List, (list) => list.board, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   lists: List[];
 
   // boardMembers

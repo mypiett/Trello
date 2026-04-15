@@ -21,15 +21,44 @@ export const useResetPassword = () => {
         }
     };
 
-    const confirmResetPassword = async (data: { email: string; code: string; newPassword: string }) => {
+    // const confirmResetPassword = async (data: { email: string; code: string; newPassword: string }) => {
+    //     setIsLoading(true);
+    //     try {
+    //         await apiFactory.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
+    //         toast.success("Đổi mật khẩu thành công!");
+    //         return true; 
+    //     } catch (error: any) {
+    //         toast.error(error.message || "Đổi mật khẩu thất bại.");
+    //         return false; 
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
+    
+    const confirmResetPassword = async (data: {
+        email: string;
+        code: string;
+        newPassword: string;
+    }) => {
+        console.log("🔥 HOOK RECEIVED DATA:", data);
         setIsLoading(true);
+
         try {
-            await apiFactory.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
+            const payload = {
+                email: data.email,
+                code: data.code,
+                newPassword: data.newPassword,
+            };
+
+            console.log("RESET PAYLOAD:", payload);
+
+            await apiFactory.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, payload);
+
             toast.success("Đổi mật khẩu thành công!");
-            return true; 
+            return true;
         } catch (error: any) {
             toast.error(error.message || "Đổi mật khẩu thất bại.");
-            return false; 
+            return false;
         } finally {
             setIsLoading(false);
         }

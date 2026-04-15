@@ -15,7 +15,7 @@
 
       // Cách 1: Nếu server hỗ trợ token qua query
       const eventSource = new EventSource(
-        `http://localhost:3000/api/notifications/stream?token=${token}`
+        `http://192.168.0.4:3000/api/notifications/stream?token=${token}`
       );
 
       eventSource.onopen = () => {
