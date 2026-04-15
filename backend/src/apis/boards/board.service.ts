@@ -635,7 +635,7 @@ export class BoardService {
       where: { id },
     });
     if (!board) throw new Error('Board not found');
-    await this.boardRepository.remove(board);
+    await this.boardRepository.delete(board);
     return { message: 'Board deleted permanently' };
   }
 

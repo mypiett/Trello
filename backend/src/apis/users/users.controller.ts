@@ -7,6 +7,7 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { UpdateProfileDto } from './user.dto';
 import cloudinary from '@/config/cloudinary';
+import { validatePassword } from '@/common/utils/validatePassword';
 
 const userService = new UserService();
 
@@ -211,6 +212,14 @@ export class UserController {
         );
       }
 
+      if (!validatePassword(newPassword)) {
+        return new ServiceResponse(
+          ResponseStatus.Failed,
+          'Password must be at least 6 characters, include at least one uppercase letter and one special character',
+          null,
+          StatusCodes.BAD_REQUEST
+        );
+      }
       await userService.changePassword(userId, {
         currentPassword,
         newPassword,
